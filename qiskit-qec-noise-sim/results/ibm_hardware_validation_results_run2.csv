@@ -1,0 +1,4 @@
+layer,experiment,label,basis,code_size,idle_steps,shots,backend,logical_success_probability,logical_error_rate
+layer3,ibm_hardware_validation,z_idle_2,Z,3,2,1000,ibm_fez,1.0,0.0
+layer3,ibm_hardware_validation,z_idle_4,Z,3,4,1000,ibm_fez,0.999,0.0010000000000000009
+layer3,ibm_hardware_validation,x_idle_4,X,3,4,1000,ibm_fez,1.0,0.0

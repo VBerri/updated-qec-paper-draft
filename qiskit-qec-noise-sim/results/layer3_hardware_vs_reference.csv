@@ -1,0 +1,4 @@
+label,basis,code_size,idle_steps,shots,backend,hardware_success,hardware_error,reference_success,delta_success
+z_idle_2,Z,3,2,1000,ibm_fez,1.0,0.0,1.0,0.0
+z_idle_4,Z,3,4,1000,ibm_fez,1.0,0.0,1.0,0.0
+x_idle_4,X,3,4,1000,ibm_fez,1.0,0.0,1.0,0.0
