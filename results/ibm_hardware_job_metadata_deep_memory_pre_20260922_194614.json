@@ -1,0 +1,8 @@
+{
+  "status": "completed",
+  "backend": "ibm_kingston",
+  "job_id": "daph5fgr7bnc73b3f2ig",
+  "shots": 12000,
+  "num_circuits": 6,
+  "instance_provided": true
+}

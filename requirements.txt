@@ -1,0 +1,12 @@
+numpy
+pandas
+matplotlib
+scipy
+qiskit
+qiskit-aer
+stim
+pymatching
+pytest
+tqdm
+torch
+qiskit-ibm-runtime

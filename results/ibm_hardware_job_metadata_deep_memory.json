@@ -1,0 +1,8 @@
+{
+  "status": "completed",
+  "backend": "ibm_fez",
+  "job_id": "das4p62hcrkc73dscg4g",
+  "shots": 12000,
+  "num_circuits": 6,
+  "instance_provided": true
+}
