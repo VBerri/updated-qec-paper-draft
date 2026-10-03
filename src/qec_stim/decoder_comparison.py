@@ -42,6 +42,16 @@ def _sample_consistent_records(circuit: stim.Circuit, shots: int):
     return measurements, syndrome, actual_observables
 
 
+def _sample_consistent_records_seeded(circuit: stim.Circuit, shots: int, seed: int | None):
+    """Seeded variant used for reproducible experimental runs."""
+    if seed is None:
+        return _sample_consistent_records(circuit=circuit, shots=shots)
+    measurements = circuit.compile_sampler(seed=seed).sample(shots)
+    converter = circuit.compile_m2d_converter()
+    syndrome, actual_observables = converter.convert(measurements=measurements, separate_observables=True)
+    return measurements, syndrome, actual_observables
+
+
 def _final_data_majority_from_measurements(
     measurements: np.ndarray,
     final_data_cols: list[int],
@@ -58,6 +68,7 @@ def run_decoder_comparison(
     distances: Iterable[int],
     p_values: Iterable[float],
     include_neural: bool = True,
+    seed: int | None = None,
     out_csv: str | Path = "results/decoder_comparison_results.csv",
 ) -> pd.DataFrame:
     rows = []
@@ -69,7 +80,7 @@ def run_decoder_comparison(
             circuit = generated_repetition_memory_circuit(distance=d, rounds=rounds, p=p)
 
             final_data_cols = _final_data_measurement_columns(circuit)
-            measurements, syndrome, actual = _sample_consistent_records(circuit, shots=shots)
+            measurements, syndrome, actual = _sample_consistent_records_seeded(circuit, shots=shots, seed=seed)
             mwpm_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="detector_model")
             unweighted_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="uniform")
             detector_heuristic_pred = _detector_count_heuristic(syndrome)
@@ -101,6 +112,7 @@ def run_decoder_comparison(
                         "p": p,
                         "method": method,
                         "shots": shots,
+                        "seed": seed,
                         "failures": failures,
                         "logical_error_rate": logical_error,
                     }
@@ -120,6 +132,7 @@ def run_decoder_comparison(
                             "rounds": rounds,
                             "p": p,
                             "shots": shots,
+                            "seed": seed,
                             "left_method": left_name,
                             "right_method": right_name,
                             "left_only_failures": int(np.sum(left_mask & ~right_mask)),

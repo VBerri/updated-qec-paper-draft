@@ -6,6 +6,7 @@ venv/
 .mypy_cache/
 .ipynb_checkpoints/
 results/*.csv
+results/**/*.csv
 figures/*.png
 logs/*.log
 !results/.gitkeep
