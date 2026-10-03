@@ -13,9 +13,9 @@ from qec_stim.stim_experiments import run_temporal_drift
 
 def mode_params(mode: str):
     if mode == "quick":
-        return 5000, [0.005, 0.01, 0.02], [3, 5, 7]
+        return 5000, [0.01, 0.02], [5, 7]
     if mode == "full-local":
-        return 100000, [0.001, 0.005, 0.01, 0.02, 0.05], [3, 5, 7, 9, 11]
+        return 100000, [0.01, 0.02], [5, 7]
     raise ValueError("mode must be quick or full-local")
 
 

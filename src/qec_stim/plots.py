@@ -73,20 +73,24 @@ def plot_heterogeneous_noise(
     fig_path: str | Path = "figures/heterogeneous_noise_plot.png",
 ) -> None:
     df = pd.read_csv(csv_path)
+    if "method" in df.columns:
+        df = df[df["method"] == "mwpm_oracle_heterogeneous_model"]
+
     agg = (
-        df.groupby(["spread", "distance"], as_index=False)["logical_error_rate"]
+        df.groupby(["scenario", "distance"], as_index=False)["logical_error_rate"]
         .mean()
-        .sort_values(["distance", "spread"])
+        .sort_values(["distance", "scenario"])
     )
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for d in sorted(agg["distance"].unique()):
         sub = agg[agg["distance"] == d]
-        ax.plot(sub["spread"], sub["logical_error_rate"], marker="o", label=f"d={d}")
-    ax.set_xlabel("Lognormal spread")
+        ax.plot(sub["scenario"], sub["logical_error_rate"], marker="o", label=f"d={d}")
+    ax.set_xlabel("Scenario")
     ax.set_ylabel("Mean logical error rate")
-    ax.set_title("Heterogeneous Noise Impact")
+    ax.set_title("Heterogeneous Noise Impact (Same-Mean Scenarios)")
     ax.grid(True, alpha=0.3)
+    ax.tick_params(axis="x", rotation=20)
     ax.legend()
     fig.tight_layout()
     Path(fig_path).parent.mkdir(parents=True, exist_ok=True)
@@ -99,13 +103,15 @@ def plot_temporal_drift(
     fig_path: str | Path = "figures/temporal_drift_plot.png",
 ) -> None:
     df = pd.read_csv(csv_path)
+    if "method" in df.columns:
+        df = df[df["method"] == "mwpm_oracle_true_schedule_model"]
     agg = df.groupby("snapshot", as_index=False)["logical_error_rate"].mean()
 
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(agg["snapshot"], agg["logical_error_rate"], marker="o")
-    ax.set_xlabel("Calibration snapshot")
+    ax.set_xlabel("Schedule scenario")
     ax.set_ylabel("Mean logical error rate")
-    ax.set_title("Temporal Drift Snapshots")
+    ax.set_title("Temporal Schedule Impact")
     ax.grid(True, alpha=0.3)
     ax.tick_params(axis="x", rotation=30)
     fig.tight_layout()

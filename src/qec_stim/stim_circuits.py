@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import stim
+from typing import Sequence
 
 
 def generated_repetition_memory_circuit(distance: int, rounds: int, p: float) -> stim.Circuit:
@@ -35,7 +36,7 @@ def _append_cx_layer(circuit: stim.Circuit, pairs: list[tuple[int, int]], p_two_
 def explicit_repetition_memory_circuit(
     distance: int,
     rounds: int,
-    data_pauli_by_round: list[tuple[float, float, float]],
+    data_pauli_by_round: Sequence[Sequence[tuple[float, float, float]] | tuple[float, float, float]],
     measurement_flip_by_round: list[float],
     p_two_qubit: float = 0.0,
     p_reset_flip: float = 0.0,
@@ -61,10 +62,17 @@ def explicit_repetition_memory_circuit(
     anc_count = len(ancilla)
     data_count = len(data)
 
+    def _round_rates(round_spec: Sequence[tuple[float, float, float]] | tuple[float, float, float]):
+        if isinstance(round_spec, tuple):
+            return [round_spec for _ in data]
+        if len(round_spec) != len(data):
+            raise ValueError("Per-round data rate vector must match number of data qubits")
+        return list(round_spec)
+
     for r in range(rounds):
-        px, py, pz = data_pauli_by_round[r]
-        if px > 0 or py > 0 or pz > 0:
-            for q in data:
+        round_rates = _round_rates(data_pauli_by_round[r])
+        for q, (px, py, pz) in zip(data, round_rates):
+            if px > 0 or py > 0 or pz > 0:
                 circuit.append("PAULI_CHANNEL_1", [q], [px, py, pz])
 
         circuit.append("TICK")

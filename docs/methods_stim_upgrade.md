@@ -15,3 +15,8 @@ Decoder-comparison note:
 - `final_data_majority` is the true simple baseline: majority vote over final data-qubit readout bits.
 - `detector_count_heuristic` is retained as a deliberately weak control baseline (it votes over detector events, not final data-bit majority).
 - The optional toy FiLM decoder is exploratory and should not be interpreted as a competitive learned decoder benchmark.
+
+Corrected heterogeneity and drift note:
+- Heterogeneous experiments now apply per-qubit data rates directly at explicit data-qubit locations while preserving the same arithmetic mean rate across control/defect scenarios.
+- Temporal-drift experiments now execute explicit per-round schedules (constant, front-half-low/back-half-high, measurement-only perturbation) instead of collapsing to a single averaged rate.
+- Decoder comparisons in these experiments are performed on identical sampled shots with both nominal-model and oracle-model MWPM variants recorded separately.

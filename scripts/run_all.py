@@ -148,7 +148,6 @@ def main() -> None:
             shots=cfg["stim_shots"],
             distances=cfg["distances"],
             p_values=cfg["stim_p_values"],
-            spreads=(0.0, 0.25, 0.5, 1.0),
             seed=12345,
             out_csv=ROOT / "results" / "heterogeneous_noise_results.csv",
         )
@@ -160,8 +159,8 @@ def main() -> None:
         logger.info("5/12 Running temporal drift analysis...")
         run_temporal_drift(
             shots=cfg["stim_shots"],
-            distances=cfg["distances"],
-            p_values=cfg["stim_p_values"],
+            distances=[d for d in cfg["distances"] if d in {5, 7}],
+            p_values=[p for p in cfg["stim_p_values"] if p in {0.01, 0.02}],
             seed=12345,
             out_csv=ROOT / "results" / "temporal_drift_results.csv",
         )

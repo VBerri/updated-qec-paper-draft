@@ -13,9 +13,9 @@ from qec_stim.stim_experiments import run_heterogeneous_noise
 
 def mode_params(mode: str):
     if mode == "quick":
-        return 5000, [0.001, 0.005, 0.01, 0.02], [3, 5, 7]
+        return 5000, [0.01, 0.02], [5, 7]
     if mode == "full-local":
-        return 100000, [0.001, 0.002, 0.005, 0.01, 0.02, 0.05], [3, 5, 7, 9, 11]
+        return 100000, [0.01, 0.02], [5, 7]
     raise ValueError("mode must be quick or full-local")
 
 
@@ -29,7 +29,7 @@ def main() -> None:
         shots=shots,
         distances=distances,
         p_values=p_values,
-        spreads=(0.0, 0.25, 0.5, 1.0),
+        seed=12345,
         out_csv=ROOT / "results" / "heterogeneous_noise_results.csv",
     )
     plot_heterogeneous_noise(

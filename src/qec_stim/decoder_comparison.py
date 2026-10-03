@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -63,6 +63,80 @@ def _final_data_majority_from_measurements(
     return predicted_observable_flip.reshape(-1, 1)
 
 
+def evaluate_decoders_on_shared_samples(
+    *,
+    sampling_circuit: stim.Circuit,
+    decoder_circuits: Mapping[str, stim.Circuit],
+    shots: int,
+    seed: int | None,
+    include_final_data_majority: bool = True,
+    include_detector_count_heuristic: bool = True,
+    prepared_logical_bit: int = 0,
+) -> tuple[list[dict], list[dict]]:
+    """Evaluate decoder methods on identical sampled shots and return metric rows plus pairwise rows."""
+    final_data_cols = _final_data_measurement_columns(sampling_circuit)
+    measurements, syndrome, actual = _sample_consistent_records_seeded(
+        sampling_circuit,
+        shots=shots,
+        seed=seed,
+    )
+
+    method_predictions: list[tuple[str, np.ndarray]] = []
+    if include_final_data_majority:
+        method_predictions.append(
+            (
+                "final_data_majority",
+                _final_data_majority_from_measurements(
+                    measurements,
+                    final_data_cols=final_data_cols,
+                    prepared_logical_bit=prepared_logical_bit,
+                ),
+            )
+        )
+    if include_detector_count_heuristic:
+        method_predictions.append(("detector_count_heuristic", _detector_count_heuristic(syndrome)))
+
+    for method, circuit in decoder_circuits.items():
+        weight_mode = "detector_model" if "unweighted" not in method else "uniform"
+        method_predictions.append((method, decode_syndrome_batch(circuit, syndrome, weight_mode=weight_mode)))
+
+    method_rows = []
+    pairwise_rows = []
+    failure_masks = {}
+    for method, pred in method_predictions:
+        fail_mask = (pred != actual).reshape(-1)
+        failure_masks[method] = fail_mask
+        failures = int(np.sum(fail_mask))
+        method_rows.append(
+            {
+                "method": method,
+                "shots": shots,
+                "seed": seed,
+                "failures": failures,
+                "logical_error_rate": float(failures / shots),
+            }
+        )
+
+    for i, (left_name, _) in enumerate(method_predictions):
+        left_mask = failure_masks[left_name]
+        for j, (right_name, _) in enumerate(method_predictions):
+            if i >= j:
+                continue
+            right_mask = failure_masks[right_name]
+            pairwise_rows.append(
+                {
+                    "left_method": left_name,
+                    "right_method": right_name,
+                    "left_only_failures": int(np.sum(left_mask & ~right_mask)),
+                    "right_only_failures": int(np.sum(right_mask & ~left_mask)),
+                    "both_failures": int(np.sum(left_mask & right_mask)),
+                    "both_success": int(np.sum(~left_mask & ~right_mask)),
+                }
+            )
+
+    return method_rows, pairwise_rows
+
+
 def run_decoder_comparison(
     shots: int,
     distances: Iterable[int],
@@ -79,30 +153,20 @@ def run_decoder_comparison(
         for p in p_values:
             circuit = generated_repetition_memory_circuit(distance=d, rounds=rounds, p=p)
 
-            final_data_cols = _final_data_measurement_columns(circuit)
-            measurements, syndrome, actual = _sample_consistent_records_seeded(circuit, shots=shots, seed=seed)
-            mwpm_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="detector_model")
-            unweighted_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="uniform")
-            detector_heuristic_pred = _detector_count_heuristic(syndrome)
-            final_majority_pred = _final_data_majority_from_measurements(
-                measurements,
-                final_data_cols=final_data_cols,
+            method_rows, pairwise = evaluate_decoders_on_shared_samples(
+                sampling_circuit=circuit,
+                decoder_circuits={
+                    "unweighted_mwpm": circuit,
+                    "mwpm": circuit,
+                },
+                shots=shots,
+                seed=seed,
+                include_final_data_majority=True,
+                include_detector_count_heuristic=True,
                 prepared_logical_bit=0,
             )
 
-            method_predictions = [
-                ("final_data_majority", final_majority_pred),
-                ("detector_count_heuristic", detector_heuristic_pred),
-                ("unweighted_mwpm", unweighted_pred),
-                ("mwpm", mwpm_pred),
-            ]
-
-            failure_masks = {}
-            for method, pred in method_predictions:
-                fail_mask = (pred != actual).reshape(-1)
-                failure_masks[method] = fail_mask
-                failures = int(np.sum(fail_mask))
-                logical_error = float(failures / shots)
+            for m in method_rows:
                 rows.append(
                     {
                         "layer": "layer2",
@@ -110,41 +174,28 @@ def run_decoder_comparison(
                         "distance": d,
                         "rounds": rounds,
                         "p": p,
-                        "method": method,
-                        "shots": shots,
-                        "seed": seed,
-                        "failures": failures,
-                        "logical_error_rate": logical_error,
+                        **m,
                     }
                 )
 
-            for i, (left_name, _) in enumerate(method_predictions):
-                left_mask = failure_masks[left_name]
-                for j, (right_name, _) in enumerate(method_predictions):
-                    if i >= j:
-                        continue
-                    right_mask = failure_masks[right_name]
-                    pairwise_rows.append(
-                        {
-                            "layer": "layer2",
-                            "experiment": "decoder_comparison_pairwise",
-                            "distance": d,
-                            "rounds": rounds,
-                            "p": p,
-                            "shots": shots,
-                            "seed": seed,
-                            "left_method": left_name,
-                            "right_method": right_name,
-                            "left_only_failures": int(np.sum(left_mask & ~right_mask)),
-                            "right_only_failures": int(np.sum(right_mask & ~left_mask)),
-                            "both_failures": int(np.sum(left_mask & right_mask)),
-                            "both_success": int(np.sum(~left_mask & ~right_mask)),
-                        }
-                    )
+            for pw in pairwise:
+                pairwise_rows.append(
+                    {
+                        "layer": "layer2",
+                        "experiment": "decoder_comparison_pairwise",
+                        "distance": d,
+                        "rounds": rounds,
+                        "p": p,
+                        "shots": shots,
+                        "seed": seed,
+                        **pw,
+                    }
+                )
 
             if include_neural:
                 from .neural_decoder import train_and_predict_toy_film_decoder
 
+                measurements, syndrome, actual = _sample_consistent_records_seeded(circuit, shots=shots, seed=seed)
                 subsample = min(5000, syndrome.shape[0])
                 syn_train = syndrome[:subsample]
                 y_train = actual[:subsample].reshape(-1)
