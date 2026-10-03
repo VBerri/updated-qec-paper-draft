@@ -14,8 +14,8 @@ def test_decoder_comparison_outputs(tmp_path: Path):
     )
     assert out_csv.exists()
     methods = set(df["method"].tolist())
-    assert methods == {"majority_vote", "unweighted_mwpm", "mwpm"}
+    assert methods == {"detector_count_heuristic", "unweighted_mwpm", "mwpm"}
 
     pivot = df.pivot_table(index=["distance", "p"], columns="method", values="logical_error_rate")
     row = pivot.loc[(5, 0.05)]
-    assert row["mwpm"] <= row["unweighted_mwpm"] <= row["majority_vote"]
+    assert row["mwpm"] <= row["unweighted_mwpm"] <= row["detector_count_heuristic"]

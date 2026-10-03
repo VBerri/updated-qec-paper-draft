@@ -10,7 +10,7 @@ from .mwpm_decode import decode_syndrome_batch, decode_with_weight_mode
 from .stim_circuits import generated_repetition_memory_circuit
 
 
-def _majority_from_syndrome(syndrome: np.ndarray) -> np.ndarray:
+def _detector_count_heuristic(syndrome: np.ndarray) -> np.ndarray:
     pred = (np.sum(syndrome, axis=1) > (syndrome.shape[1] / 2.0)).astype(np.uint8)
     return pred.reshape(-1, 1)
 
@@ -31,10 +31,10 @@ def run_decoder_comparison(
 
             syndrome, actual, mwpm_pred = decode_with_weight_mode(circuit, shots=shots, weight_mode="detector_model")
             unweighted_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="uniform")
-            majority_pred = _majority_from_syndrome(syndrome)
+            detector_heuristic_pred = _detector_count_heuristic(syndrome)
 
             for method, pred in [
-                ("majority_vote", majority_pred),
+                ("detector_count_heuristic", detector_heuristic_pred),
                 ("unweighted_mwpm", unweighted_pred),
                 ("mwpm", mwpm_pred),
             ]:

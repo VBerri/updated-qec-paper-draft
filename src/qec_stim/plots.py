@@ -120,14 +120,14 @@ def plot_decoder_comparison(
 ) -> None:
     df = pd.read_csv(csv_path)
     method_labels = {
-        "majority_vote": "Majority vote",
+        "detector_count_heuristic": "Detector-count heuristic",
         "unweighted_mwpm": "Unweighted MWPM",
         "mwpm": "MWPM",
         "toy_film_neural": "Toy FiLM neural",
     }
     method_order = [
         method
-        for method in ["majority_vote", "unweighted_mwpm", "mwpm", "toy_film_neural"]
+        for method in ["detector_count_heuristic", "unweighted_mwpm", "mwpm", "toy_film_neural"]
         if method in set(df["method"])
     ]
 
