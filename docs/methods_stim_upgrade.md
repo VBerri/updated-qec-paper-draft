@@ -12,5 +12,6 @@ The repetition code is not a complete arbitrary-state quantum error-correcting c
 Decoder-comparison note:
 - `mwpm` is the serious reference decoder in this layer.
 - `mwpm` already consumes Stim's detector error model through PyMatching, so it is the naturally weighted decoder for this benchmark.
+- `final_data_majority` is the true simple baseline: majority vote over final data-qubit readout bits.
 - `detector_count_heuristic` is retained as a deliberately weak control baseline (it votes over detector events, not final data-bit majority).
 - The optional toy FiLM decoder is exploratory and should not be interpreted as a competitive learned decoder benchmark.
