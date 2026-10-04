@@ -36,5 +36,9 @@ Included exports:
 
 ## Scope Notes
 
-- Refreshed bias, heterogeneity, temporal-drift, and calibration sweeps in this package are single-seed runs (`12345`) for the reported simulated conditions.
-- The corrected decoder-comparison slice at `d=11, p=0.02` uses three seeds and remains the designated corrected comparison evidence.
+- This folder now contains two distinct evidence tiers:
+	- Single-seed refresh tier (seed 12345) from the first non-hardware correction pass.
+	- Multi-seed broader-claim tier (seeds 101, 202, 303) stored under results/multiseed_claims with pooled summaries and pairwise summaries.
+- The corrected decoder-comparison diagnostic slice at d=11, p=0.02 in results/corrected_runs uses 300,000 total shots (three seeds x 100,000 shots).
+- The broader decoder grid in results/multiseed_claims uses 75,000 total shots per grid point (three seeds x 25,000 shots).
+- Different estimates between the 300,000-shot diagnostic slice and the 75,000-shot grid slice are expected finite-sample variation, not a methodological contradiction.

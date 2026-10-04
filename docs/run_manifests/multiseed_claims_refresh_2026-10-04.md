@@ -61,12 +61,20 @@ All artifacts are under results/multiseed_claims:
   - temporal_drift_multiseed_summary.csv
   - calibration_adaptive_multiseed_summary.csv
   - decoder_comparison_multiseed_summary.csv
+- Pairwise pooled summaries:
+  - heterogeneous_noise_multiseed_pairwise_summary.csv
+  - temporal_drift_multiseed_pairwise_summary.csv
+  - decoder_comparison_multiseed_pairwise_summary.csv
 - Combined tables:
   - bias_sweep_multiseed_all.csv
   - heterogeneous_noise_multiseed_all.csv
   - temporal_drift_multiseed_all.csv
   - calibration_adaptive_multiseed_all.csv
   - decoder_comparison_multiseed_all.csv
+- Combined pairwise tables:
+  - heterogeneous_noise_multiseed_pairwise_all.csv
+  - temporal_drift_multiseed_pairwise_all.csv
+  - decoder_comparison_multiseed_pairwise_all.csv
 - Config record:
   - multiseed_run_config.csv
 
@@ -74,3 +82,5 @@ All artifacts are under results/multiseed_claims:
 
 - These pooled summaries support broader simulation-level claims relative to the previous single-seed refresh.
 - They remain simulation evidence and should be reported with uncertainty language appropriate to finite-shot Monte Carlo data.
+- Pooled summaries include Wilson 95% confidence bounds; zero-failure points are reported with a non-zero upper confidence bound instead of being interpreted as true zero error.
+- The multi-seed grid uses 75,000 shots per point (3 x 25,000), while the separate corrected d=11, p=0.02 diagnostic slice in results/corrected_runs uses 300,000 shots (3 x 100,000). Different point estimates between these artifacts are expected and not contradictory.
