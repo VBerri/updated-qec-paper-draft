@@ -85,6 +85,8 @@ def explicit_repetition_memory_circuit(
         if p_meas > 0:
             circuit.append("X_ERROR", ancilla, [p_meas])
         circuit.append("MR", ancilla)
+        if p_reset_flip > 0:
+            circuit.append("X_ERROR", ancilla, [p_reset_flip])
 
         if r == 0:
             for j in range(anc_count):
@@ -129,16 +131,19 @@ def biased_noise_repetition_approximation(
     py: float,
     pz: float,
     measurement_flip_probability: float,
+    p_reset_flip: float = 1e-3,
+    p_two_qubit: float = 1e-3,
 ) -> stim.Circuit:
-    """
-    Approximate biased behavior while preserving robust detector structure.
+    """Approximate a biased Pauli channel while keeping reset and gate noise fixed.
 
-    We use Stim's generated repetition memory circuit and map bias into effective
-    channel strengths affecting X-like logical flips and measurement reliability.
+    The data-noise bias is swept through `px`, `py`, and `pz` only. Reset and
+    two-qubit gate-error channels remain fixed at the baseline values so that the
+    experiment isolates data-noise bias rather than reparameterizing the whole
+    noise budget.
     """
     p_meas = min(max(measurement_flip_probability, 0.0), 0.49)
-    p_reset = min(max(px + py, 0.0), 0.49)
-    p_twoq = min(max(px + py + pz, 0.0), 0.49)
+    p_reset = min(max(p_reset_flip, 0.0), 0.49)
+    p_twoq = min(max(p_two_qubit, 0.0), 0.49)
 
     data_round = (float(px), float(py), float(pz))
     return explicit_repetition_memory_circuit(

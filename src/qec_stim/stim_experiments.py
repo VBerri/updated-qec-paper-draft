@@ -62,7 +62,9 @@ def run_bias_sweep(
         for p_total in p_values:
             for bias_z in bias_values:
                 px, py, pz = biased_pauli_rates(p_total=p_total, bias_z=bias_z)
-                p_meas = min(p_total, 0.49)
+                p_meas = 1e-3
+                p_reset = 1e-3
+                p_two_qubit = 1e-3
                 circuit = biased_noise_repetition_approximation(
                     distance=d,
                     rounds=rounds,
@@ -70,6 +72,8 @@ def run_bias_sweep(
                     py=py,
                     pz=pz,
                     measurement_flip_probability=p_meas,
+                    p_reset_flip=p_reset,
+                    p_two_qubit=p_two_qubit,
                 )
                 logical_error = decode_logical_error_rate(circuit, shots=shots)
                 rows.append(
