@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from qec_stim.stim_experiments import run_bias_sweep, run_heterogeneous_noise, run_temporal_drift
+from qec_stim.stim_experiments import (
+    run_bias_sweep,
+    run_heterogeneous_noise,
+    run_stim_mwpm_experiments,
+    run_temporal_drift,
+)
 
 
 def test_bias_sweep_outputs_seed_and_failures(tmp_path: Path):
@@ -22,6 +27,23 @@ def test_bias_sweep_outputs_seed_and_failures(tmp_path: Path):
     assert int(df["failures"].min()) >= 0
     assert int(df["failures"].max()) <= 2000
     assert set(df["seed"].unique()) == {123}
+
+
+def test_run_stim_mwpm_experiments_executes_and_writes_csv(tmp_path: Path):
+    out_csv = tmp_path / "stim_mwpm.csv"
+    df = run_stim_mwpm_experiments(
+        shots=2000,
+        distances=(3,),
+        p_values=(0.01,),
+        out_csv=out_csv,
+    )
+
+    assert out_csv.exists()
+    assert df.shape[0] == 1
+    row = df.iloc[0]
+    assert int(row["distance"]) == 3
+    assert float(row["p"]) == 0.01
+    assert 0.0 <= float(row["logical_error_rate"]) <= 1.0
 
 
 def test_heterogeneous_noise_same_mean_outputs(tmp_path: Path):

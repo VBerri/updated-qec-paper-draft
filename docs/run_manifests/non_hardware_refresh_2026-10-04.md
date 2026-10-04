@@ -9,7 +9,9 @@ Refresh all non-hardware artifacts affected by corrected reset/gate handling and
 ## Code Provenance
 
 - Repository: VBerri/updated-qec-paper-draft
-- Base revision used for this regeneration: 2c3cc67
+- Base revision before refresh work: 2c3cc67
+- Refresh implementation and regenerated outputs were produced from the modified working tree and committed as d183967.
+- Reproducing this exact refresh requires commit d183967 (or later), because seed-enabled command paths were introduced in that revision.
 - Key updated modules:
   - src/qec_stim/stim_experiments.py
   - src/qec_stim/calibration_adaptive.py
@@ -50,6 +52,16 @@ Executed from project root with PYTHONPATH=src:
 - figures/temporal_drift_plot.png
 - figures/calibration_adaptive_rounds.png
 
+Tracked submission copies (for publication materials):
+
+- docs/submission_materials/figures/bias_heatmap.png
+- docs/submission_materials/figures/bias_curves_by_distance.png
+- docs/submission_materials/figures/heterogeneous_noise_plot.png
+- docs/submission_materials/figures/temporal_drift_plot.png
+- docs/submission_materials/figures/calibration_adaptive_rounds.png
+- docs/submission_materials/figures/decoder_comparison.png
+- docs/submission_materials/figures/stim_logical_error_vs_p.png
+
 ## Reproducibility Metadata
 
 - Bias and calibration outputs now include seed and integer failure counts.
@@ -60,9 +72,23 @@ Executed from project root with PYTHONPATH=src:
   - results/corrected_runs/decoder_comparison_d11_p002_seed202.csv
   - results/corrected_runs/decoder_comparison_d11_p002_seed303.csv
 
+Stim and detector-error-model exports included in tracked submission materials:
+
+- docs/submission_materials/reproducibility/stim_dem/decoder_comparison_d11_r11_p0p02.stim
+- docs/submission_materials/reproducibility/stim_dem/decoder_comparison_d11_r11_p0p02.dem
+- docs/submission_materials/reproducibility/stim_dem/bias_sweep_d7_r7_ptotal0p02_bias10.stim
+- docs/submission_materials/reproducibility/stim_dem/bias_sweep_d7_r7_ptotal0p02_bias10.dem
+- docs/submission_materials/reproducibility/stim_dem/heterogeneous_center_defect_d7_r7_pmean0p02.stim
+- docs/submission_materials/reproducibility/stim_dem/heterogeneous_center_defect_d7_r7_pmean0p02.dem
+- docs/submission_materials/reproducibility/stim_dem/temporal_fronthalf_low_backhalf_high_d7_r10_pmean0p02.stim
+- docs/submission_materials/reproducibility/stim_dem/temporal_fronthalf_low_backhalf_high_d7_r10_pmean0p02.dem
+- docs/submission_materials/reproducibility/stim_dem/calibration_friday_d5_r7_ptotal0p02_bias2p5.stim
+- docs/submission_materials/reproducibility/stim_dem/calibration_friday_d5_r7_ptotal0p02_bias2p5.dem
+
 ## Manuscript Alignment Note
 
 - docs/paper_draft.md Stage 2 slice now cites corrected pooled rates from the designated three-seed summary:
   - final_data_majority: 0.054423
   - mwpm: 0.000853
 - The broad distance/noise superiority claim is explicitly deferred pending expanded multi-seed uncertainty reporting.
+- The refreshed bias, heterogeneity, temporal-drift, and calibration sweeps are currently single-seed (12345) evidence for the reported simulated conditions, not multi-seed superiority proof.

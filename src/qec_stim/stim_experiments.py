@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .decoder_comparison import evaluate_decoders_on_shared_samples
-from .mwpm_decode import decode_logical_stats
+from .mwpm_decode import decode_logical_error_rate, decode_logical_stats
 from .noise_models import (
     biased_pauli_rates,
 )
