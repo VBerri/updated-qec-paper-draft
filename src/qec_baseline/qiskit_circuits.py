@@ -67,8 +67,15 @@ def build_unencoded_memory_control_circuit(
     rounds: int,
     delay_dt: int,
     logical_bit: int = 0,
+    total_delay_dt: int | None = None,
 ) -> QuantumCircuit:
-    """Single-qubit duration-matched memory control circuit."""
+    """Single-qubit duration-matched memory control circuit.
+
+    The default behavior preserves the legacy API: a delay of ``delay_dt`` is inserted
+    once per round. When ``total_delay_dt`` is specified, the control uses the exact
+    elapsed memory duration implied by the encoded circuit comparison interval rather
+    than only the nominal per-round multiplication.
+    """
     if rounds <= 0:
         raise ValueError("rounds must be positive")
     if delay_dt < 0:
@@ -83,9 +90,15 @@ def build_unencoded_memory_control_circuit(
     if logical_bit == 1:
         qc.x(data[0])
 
-    for _ in range(rounds):
-        if delay_dt > 0:
-            qc.delay(delay_dt, data[0], unit="dt")
+    if total_delay_dt is None:
+        for _ in range(rounds):
+            if delay_dt > 0:
+                qc.delay(delay_dt, data[0], unit="dt")
+    else:
+        if total_delay_dt < 0:
+            raise ValueError("total_delay_dt must be non-negative")
+        if total_delay_dt > 0:
+            qc.delay(total_delay_dt, data[0], unit="dt")
 
     qc.measure(data[0], memory[0])
     return qc

@@ -40,17 +40,19 @@ The unweighted MWPM comparison further clarified the point. Because the weighted
 
 ## 5. Stage 3: IBM hardware validation
 
-The third stage tested a constrained hardware implementation on IBM Quantum hardware. The hardware protocol used a minimal repetition-memory setting with three validation circuits and 1000 shots per circuit. The same core validation was repeated across three hardware jobs on backend `ibm_fez`.
+The third stage targets a constrained and explicit question on IBM hardware: on a fixed five-qubit physical layout, how do final-data majority and syndrome-history decoding compare for a three-data-qubit repetition-memory protocol, and how do encoded outcomes compare against duration-matched unencoded controls. The protocol is computational-basis memory with offline decoding only.
 
-The measured hardware outcomes were highly stable. The latest run reported logical-success probabilities of 0.999 for `z_idle_2`, 1.000 for `z_idle_4`, and 1.000 for `x_idle_4`. Across the three runs, the maximum per-circuit run-to-run variation was only 0.001. This suggests that the cloud execution path is operational and that the measurement process remains stable on this reduced test circuit set.
+The hardware circuits use three data qubits and two ancillas, logical inputs 0 and 1, and both one-round and three-round syndrome extraction. For each encoded condition, matching unencoded controls are run on all three physical data-qubit positions with duration matching defined over the encoded memory interval. The analysis reports integer failures, shot totals, and confidence intervals from saved raw joint bitstring counts.
 
-This stage does not claim a full hardware threshold or a large-scale benchmark. Instead, it demonstrates that the same repetition-memory concept remains feasible under a real hardware execution environment, and that the workflow is stable enough to be treated as a meaningful device-level validation of the local theory.
+This stage is intentionally not framed as arbitrary-state preservation, real-time error correction, or a threshold experiment. It is a controlled device-level validation focused on decoder comparison fairness (same-shot paired decoding for encoded circuits), explicit timing controls, and reproducible run provenance.
+
+In the completed campaign summary, history-aware decoding and final-data majority are close for one-round circuits and diverge more clearly at three rounds, especially for logical-1 preparations. At three rounds with delay-384, the pooled encoded error rates are 0.0464 (history-aware) versus 0.0359 (majority), while the mean duration-matched unencoded control error rate is 0.0156. These values are reported as observed hardware outcomes under the chosen layout and schedule, not as universal superiority claims.
 
 ## 6. Comparison across the three stages
 
 The three stages can be compared directly as follows.
 
-First, the original Qiskit baseline establishes the fundamental repetition-code claim: larger codes improve logical success under common noise models. Second, the Stim decoder comparison shows that the same repetition-memory idea performs very differently when the detector information is used more effectively. Third, the IBM hardware validation demonstrates that the logical behavior remains stable under a real cloud execution path, even when the circuit family is intentionally small and constrained.
+First, the original Qiskit baseline establishes the fundamental repetition-code claim: larger codes improve logical success under common noise models. Second, the Stim decoder comparison shows that the same repetition-memory idea performs very differently when the detector information is used more effectively. Third, the IBM hardware validation tests whether those decoder and control distinctions remain interpretable under a fixed-layout cloud execution path with explicit timing controls.
 
 Taken together, the stages form a layered argument. The baseline shows the effect of redundancy. The Stim stage shows the effect of structured decoding. The hardware stage shows the effect of device execution under realistic constraints. Each stage addresses a different question, but each is consistent with the same underlying scientific theme: repetition-coded memory is a meaningful and interpretable candidate for error correction, and the performance depends on both encoding and decoding choices.
 

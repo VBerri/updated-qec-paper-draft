@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import math
 import os
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 import pandas as pd
-from qiskit import transpile
+from qiskit import qpy, transpile
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 from qiskit_ibm_runtime.accounts.exceptions import AccountNotFoundError, InvalidAccountError
 from qiskit_ibm_runtime.exceptions import IBMBackendError
@@ -28,19 +30,16 @@ def _build_service(token: str | None, instance: str | None) -> QiskitRuntimeServ
     if instance:
         base_kwargs["instance"] = instance
 
-    # qiskit-ibm-runtime channel names changed across versions.
     last_error: Exception | None = None
-    for channel in ("ibm_cloud", "ibm_quantum_platform", "ibm_quantum"):
+    for channel in ("ibm_cloud", "ibm_quantum_platform"):
         try:
             return QiskitRuntimeService(channel=channel, **base_kwargs)
         except ValueError as exc:
-            # Unknown channel name in this version: try the next known alias.
             if "channel" in str(exc):
                 last_error = exc
                 continue
             raise
         except (InvalidAccountError, AccountNotFoundError) as exc:
-            # Account/token may be valid for a different channel family.
             last_error = exc
             continue
 
@@ -55,19 +54,20 @@ def _backend_name(backend) -> str:
     return name_attr() if callable(name_attr) else str(name_attr)
 
 
-def _extract_counts_from_sampler_pub(pub_result) -> dict:
+def _extract_counts_from_sampler_pub(pub_result, register_name: str = "m") -> dict[str, int]:
     data = getattr(pub_result, "data", None)
     if data is None:
         raise RuntimeError("Sampler result does not contain data payload")
 
-    for field in dir(data):
-        if field.startswith("_"):
-            continue
-        field_obj = getattr(data, field)
-        if hasattr(field_obj, "get_counts"):
-            return field_obj.get_counts()
+    if hasattr(data, register_name):
+        register_obj = getattr(data, register_name)
+        if hasattr(register_obj, "get_counts"):
+            return {str(k): int(v) for k, v in register_obj.get_counts().items()}
 
-    raise RuntimeError("Unable to extract counts from SamplerV2 result payload")
+    available = [field for field in dir(data) if not field.startswith("_")]
+    raise RuntimeError(
+        f"Unable to extract register '{register_name}' from SamplerV2 payload. Available fields: {available}"
+    )
 
 
 def _pick_backend(
@@ -83,16 +83,11 @@ def _pick_backend(
         num_qubits = getattr(getattr(backend, "configuration", lambda: None)(), "num_qubits", None)
         if num_qubits is not None and num_qubits < min_num_qubits:
             raise RuntimeError(
-                f"Requested backend '{backend_name}' has {num_qubits} qubits, "
-                f"but at least {min_num_qubits} are required."
+                f"Requested backend '{backend_name}' has {num_qubits} qubits, but at least {min_num_qubits} are required."
             )
         return backend
 
-    candidates = service.backends(
-        simulator=False,
-        operational=True,
-        min_num_qubits=min_num_qubits,
-    )
+    candidates = service.backends(simulator=False, operational=True, min_num_qubits=min_num_qubits)
     if not candidates:
         raise RuntimeError("No operational IBM backend available for the requested qubit count.")
     return min(candidates, key=lambda b: b.status().pending_jobs)
@@ -121,15 +116,31 @@ def _build_layer3_circuits(code_size: int = 3):
     ]
 
 
-def _build_corrected_hardware_specs(delay_dt: int = 256):
-    return [
-        {"label": "encoded_r1_log0", "kind": "encoded", "rounds": 1, "logical_bit": 0, "delay_dt": delay_dt},
-        {"label": "encoded_r1_log1", "kind": "encoded", "rounds": 1, "logical_bit": 1, "delay_dt": delay_dt},
-        {"label": "encoded_r3_log0", "kind": "encoded", "rounds": 3, "logical_bit": 0, "delay_dt": delay_dt},
-        {"label": "encoded_r3_log1", "kind": "encoded", "rounds": 3, "logical_bit": 1, "delay_dt": delay_dt},
-        {"label": "unencoded_r3_log0", "kind": "unencoded", "rounds": 3, "logical_bit": 0, "delay_dt": delay_dt},
-        {"label": "unencoded_r3_log1", "kind": "unencoded", "rounds": 3, "logical_bit": 1, "delay_dt": delay_dt},
-    ]
+def _build_corrected_hardware_specs(delay_dt: int = 0) -> list[dict[str, Any]]:
+    specs: list[dict[str, Any]] = []
+    for rounds in (1, 3):
+        for logical_bit in (0, 1):
+            specs.append(
+                {
+                    "label": f"encoded_r{rounds}_log{logical_bit}",
+                    "kind": "encoded",
+                    "rounds": rounds,
+                    "logical_bit": logical_bit,
+                    "delay_dt": delay_dt,
+                }
+            )
+            for control_data_index in (0, 1, 2):
+                specs.append(
+                    {
+                        "label": f"unencoded_r{rounds}_log{logical_bit}_dq{control_data_index}",
+                        "kind": "unencoded",
+                        "rounds": rounds,
+                        "logical_bit": logical_bit,
+                        "delay_dt": delay_dt,
+                        "control_data_index": control_data_index,
+                    }
+                )
+    return specs
 
 
 def _normalize_circuit_specs(code_size: int, circuit_specs: Sequence[dict] | None):
@@ -163,10 +174,20 @@ def _normalize_corrected_specs(circuit_specs: Sequence[dict] | None, delay_dt: i
         rounds = int(spec["rounds"])
         logical_bit = int(spec.get("logical_bit", 0))
         this_delay = int(spec.get("delay_dt", delay_dt))
+        total_delay_dt = spec.get("total_delay_dt", None)
+        if total_delay_dt is not None:
+            total_delay_dt = int(total_delay_dt)
+        control_data_index = int(spec.get("control_data_index", 0))
+
         if kind == "encoded":
             circuit = build_repetition_syndrome_memory_circuit(rounds=rounds, delay_dt=this_delay, logical_bit=logical_bit)
         elif kind == "unencoded":
-            circuit = build_unencoded_memory_control_circuit(rounds=rounds, delay_dt=this_delay, logical_bit=logical_bit)
+            circuit = build_unencoded_memory_control_circuit(
+                rounds=rounds,
+                delay_dt=max(this_delay, 1),
+                logical_bit=logical_bit,
+                total_delay_dt=total_delay_dt,
+            )
         else:
             raise ValueError(f"Unsupported corrected hardware kind: {kind}")
 
@@ -177,6 +198,8 @@ def _normalize_corrected_specs(circuit_specs: Sequence[dict] | None, delay_dt: i
                 "rounds": rounds,
                 "logical_bit": logical_bit,
                 "delay_dt": this_delay,
+                "total_delay_dt": total_delay_dt,
+                "control_data_index": control_data_index,
                 "circuit": circuit,
             }
         )
@@ -188,49 +211,209 @@ def _bits_from_memory_str(memory_str: str) -> list[int]:
     return [int(ch) for ch in cleaned[::-1]]
 
 
-def _decode_encoded_shot(bits: list[int], rounds: int, prepared_logical_bit: int) -> int:
-    # Flat memory map from circuit builder:
-    # [2*rounds syndrome bits][3 final data bits]
+def _unique_run_paths(base_path: str | Path, run_tag: str) -> tuple[Path, Path, Path, Path]:
+    base = Path(base_path)
+    base.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_dir = base.parent / f"{base.stem}_{run_tag}_{timestamp}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir / base.name, run_dir / "raw_counts.json", run_dir / "runtime_metadata.json", run_dir
+
+
+def _require_encoded_bits(bits: list[int], rounds: int) -> None:
+    required = (2 * rounds) + 3
+    if len(bits) != required:
+        raise ValueError(f"Encoded record has {len(bits)} bits, expected {required} for rounds={rounds}")
+
+
+def _decode_final_data_majority_bit(bits: list[int], rounds: int) -> int:
+    _require_encoded_bits(bits, rounds)
     data_start = 2 * rounds
     data_bits = bits[data_start : data_start + 3]
-    if len(data_bits) != 3:
-        return 0
+    return 1 if sum(data_bits) >= 2 else 0
 
-    # Use latest non-trivial syndrome as correction hint before majority.
-    inferred_data = data_bits.copy()
-    for r in range(rounds - 1, -1, -1):
-        s01 = bits[2 * r]
-        s12 = bits[2 * r + 1]
-        if s01 == 0 and s12 == 0:
-            continue
-        if s01 == 1 and s12 == 0:
-            inferred_data[0] ^= 1
-        elif s01 == 0 and s12 == 1:
-            inferred_data[2] ^= 1
+
+def _syndrome_rounds_from_bits(bits: list[int], rounds: int) -> list[tuple[int, int]]:
+    _require_encoded_bits(bits, rounds)
+    return [(bits[2 * r], bits[2 * r + 1]) for r in range(rounds)]
+
+
+def _detection_events_from_bits(bits: list[int], rounds: int) -> list[tuple[int, int]]:
+    syndrome = _syndrome_rounds_from_bits(bits, rounds)
+    data_start = 2 * rounds
+    d0, d1, d2 = bits[data_start : data_start + 3]
+    final_parity = (d0 ^ d1, d1 ^ d2)
+
+    det: list[tuple[int, int]] = []
+    prev = (0, 0)
+    for s in syndrome:
+        det.append((prev[0] ^ s[0], prev[1] ^ s[1]))
+        prev = s
+    det.append((prev[0] ^ final_parity[0], prev[1] ^ final_parity[1]))
+    return det
+
+
+def _state_bits(state: int) -> tuple[int, int, int]:
+    return (state & 1, (state >> 1) & 1, (state >> 2) & 1)
+
+
+def _state_parity(state: int) -> tuple[int, int]:
+    d0, d1, d2 = _state_bits(state)
+    return (d0 ^ d1, d1 ^ d2)
+
+
+def _hamming_bits(a: tuple[int, ...], b: tuple[int, ...]) -> int:
+    return sum(int(x != y) for x, y in zip(a, b))
+
+
+def _decode_history_matching_bit(bits: list[int], rounds: int) -> int:
+    _require_encoded_bits(bits, rounds)
+    det_obs = _detection_events_from_bits(bits, rounds)
+    data_start = 2 * rounds
+    final_meas = tuple(bits[data_start : data_start + 3])
+
+    # Fixed weights that are declared once and not tuned on evaluation data.
+    p_data = 0.02
+    p_det = 0.04
+    p_readout = 0.10
+    w_data = math.log((1.0 - p_data) / p_data)
+    w_det = math.log((1.0 - p_det) / p_det)
+    w_readout = math.log((1.0 - p_readout) / p_readout)
+
+    states = list(range(8))
+    inf = float("inf")
+
+    def hypothesis_cost(logical_bit: int) -> float:
+        init_bits = (logical_bit, logical_bit, logical_bit)
+        dp: dict[int, float] = {}
+
+        # Round 0: from hypothesis boundary to first measured round.
+        for cur in states:
+            cur_bits = _state_bits(cur)
+            cur_parity = _state_parity(cur)
+            flip_cost = _hamming_bits(init_bits, cur_bits) * w_data
+            det_cost = _hamming_bits(det_obs[0], cur_parity) * w_det
+            dp[cur] = flip_cost + det_cost
+
+        # Interior rounds: parity-change matching graph along time.
+        for t in range(1, rounds):
+            next_dp: dict[int, float] = {}
+            for cur in states:
+                best = inf
+                cur_bits = _state_bits(cur)
+                cur_parity = _state_parity(cur)
+                for prev in states:
+                    prev_bits = _state_bits(prev)
+                    prev_parity = _state_parity(prev)
+                    det_exp = (prev_parity[0] ^ cur_parity[0], prev_parity[1] ^ cur_parity[1])
+                    det_cost = _hamming_bits(det_obs[t], det_exp) * w_det
+                    trans_cost = _hamming_bits(prev_bits, cur_bits) * w_data
+                    total = dp[prev] + det_cost + trans_cost
+                    if total < best:
+                        best = total
+                next_dp[cur] = best
+            dp = next_dp
+
+        # Final boundary and readout fit.
+        best = inf
+        for fin in states:
+            fin_bits = _state_bits(fin)
+            fin_parity = _state_parity(fin)
+            readout_cost = _hamming_bits(fin_bits, final_meas) * w_readout
+            for prev in states:
+                prev_bits = _state_bits(prev)
+                prev_parity = _state_parity(prev)
+                det_exp = (prev_parity[0] ^ fin_parity[0], prev_parity[1] ^ fin_parity[1])
+                det_cost = _hamming_bits(det_obs[rounds], det_exp) * w_det
+                trans_cost = _hamming_bits(prev_bits, fin_bits) * w_data
+                total = dp[prev] + det_cost + trans_cost + readout_cost
+                if total < best:
+                    best = total
+        return best
+
+    cost0 = hypothesis_cost(0)
+    cost1 = hypothesis_cost(1)
+    return 1 if cost1 < cost0 else 0
+
+
+def _decode_encoded_shot(bits: list[int], rounds: int, prepared_logical_bit: int | None = None) -> int:
+    return _decode_history_matching_bit(bits, rounds)
+
+
+def _decode_unencoded_shot(bits: list[int], prepared_logical_bit: int | None = None) -> int:
+    if len(bits) != 1:
+        raise ValueError(f"Unencoded record has {len(bits)} bits, expected 1")
+    return int(bits[0])
+
+
+def _assert_counts_sum(counts: dict[str, int], shots: int, label: str) -> None:
+    total = int(sum(int(v) for v in counts.values()))
+    if total != shots:
+        raise RuntimeError(f"Count total mismatch for {label}: expected {shots}, got {total}")
+
+
+def _evaluate_encoded_counts(spec: dict[str, Any], counts: dict[str, int]) -> dict[str, Any]:
+    rounds = int(spec["rounds"])
+    expected = int(spec["logical_bit"])
+    maj_successes = 0
+    hist_successes = 0
+    both_correct = 0
+    maj_only = 0
+    hist_only = 0
+    both_wrong = 0
+
+    for bitstring, n_raw in counts.items():
+        n = int(n_raw)
+        bits = _bits_from_memory_str(bitstring)
+        maj = _decode_final_data_majority_bit(bits, rounds)
+        hist = _decode_history_matching_bit(bits, rounds)
+        maj_ok = int(maj == expected)
+        hist_ok = int(hist == expected)
+        maj_successes += n * maj_ok
+        hist_successes += n * hist_ok
+
+        if maj_ok and hist_ok:
+            both_correct += n
+        elif maj_ok and not hist_ok:
+            maj_only += n
+        elif hist_ok and not maj_ok:
+            hist_only += n
         else:
-            inferred_data[1] ^= 1
-        break
+            both_wrong += n
 
-    majority = 1 if sum(inferred_data) >= 2 else 0
-    return 1 if majority == prepared_logical_bit else 0
+    return {
+        "majority_successes": maj_successes,
+        "history_successes": hist_successes,
+        "paired_both_correct": both_correct,
+        "paired_majority_only": maj_only,
+        "paired_history_only": hist_only,
+        "paired_both_wrong": both_wrong,
+    }
 
 
-def _decode_unencoded_shot(bits: list[int], prepared_logical_bit: int) -> int:
-    if not bits:
-        return 0
-    return 1 if bits[0] == prepared_logical_bit else 0
+def _evaluate_unencoded_counts(spec: dict[str, Any], counts: dict[str, int]) -> dict[str, Any]:
+    expected = int(spec["logical_bit"])
+    successes = 0
+    for bitstring, n_raw in counts.items():
+        n = int(n_raw)
+        bits = _bits_from_memory_str(bitstring)
+        decoded = _decode_unencoded_shot(bits)
+        successes += n * int(decoded == expected)
+    total = int(sum(counts.values()))
+    return {
+        "majority_successes": successes,
+        "history_successes": successes,
+        "paired_both_correct": successes,
+        "paired_majority_only": 0,
+        "paired_history_only": 0,
+        "paired_both_wrong": total - successes,
+    }
 
 
 def _successes_from_counts(spec: dict, counts: dict[str, int]) -> int:
-    successes = 0
-    for bitstring, n in counts.items():
-        bits = _bits_from_memory_str(bitstring)
-        if spec["kind"] == "encoded":
-            succ = _decode_encoded_shot(bits, rounds=spec["rounds"], prepared_logical_bit=spec["logical_bit"])
-        else:
-            succ = _decode_unencoded_shot(bits, prepared_logical_bit=spec["logical_bit"])
-        successes += int(n) * succ
-    return successes
+    if spec["kind"] == "encoded":
+        return int(_evaluate_encoded_counts(spec, counts)["history_successes"])
+    return int(_evaluate_unencoded_counts(spec, counts)["history_successes"])
 
 
 def _wilson_ci(successes: int, shots: int, z: float = 1.96) -> tuple[float, float]:
@@ -241,6 +424,26 @@ def _wilson_ci(successes: int, shots: int, z: float = 1.96) -> tuple[float, floa
     center = (phat + (z**2 / (2 * shots))) / denom
     radius = (z / denom) * math.sqrt((phat * (1 - phat) / shots) + (z**2 / (4 * shots * shots)))
     return max(0.0, center - radius), min(1.0, center + radius)
+
+
+def _git_commit_hash() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    except Exception:
+        return "unknown"
+
+
+def _encoded_initial_layout(path_five: Sequence[int]) -> list[int]:
+    if len(path_five) != 5:
+        raise ValueError("physical_path must contain 5 IDs: [data0, anc0, data1, anc1, data2]")
+    data0, anc0, data1, anc1, data2 = [int(x) for x in path_five]
+    return [data0, data1, data2, anc0, anc1]
+
+
+def _control_physical_qubit(path_five: Sequence[int], control_data_index: int) -> int:
+    if control_data_index not in {0, 1, 2}:
+        raise ValueError("control_data_index must be 0, 1, or 2")
+    return int([path_five[0], path_five[2], path_five[4]][control_data_index])
 
 
 def validate_ibm_environment() -> tuple[str | None, str | None]:
@@ -337,8 +540,10 @@ def run_ibm_hardware_validation(
 def run_ibm_hardware_syndrome_validation(
     shots: int = 1000,
     backend_name: str | None = None,
-    delay_dt: int = 256,
+    delay_dt: int = 0,
     circuit_specs: Sequence[dict] | None = None,
+    physical_path: Sequence[int] | None = None,
+    seed_transpiler: int = 7,
     out_csv: str | Path = "results/ibm_hardware_syndrome_validation_results.csv",
     out_job_json: str | Path = "results/ibm_hardware_syndrome_validation_job_metadata.json",
     out_transpile_json: str | Path = "results/ibm_hardware_syndrome_transpile_summary.json",
@@ -350,9 +555,52 @@ def run_ibm_hardware_syndrome_validation(
     service = _build_service(token=token, instance=instance)
     backend = _pick_backend(service, min_num_qubits=5, backend_name=backend_name)
 
+    if physical_path is None:
+        physical_path = [0, 1, 2, 3, 4]
+
     selected = _normalize_corrected_specs(circuit_specs=circuit_specs, delay_dt=delay_dt)
-    circuits = [x["circuit"] for x in selected]
-    transpiled = transpile(circuits, backend=backend, optimization_level=1)
+
+    duration_estimates_dt: dict[tuple[int, int], int] = {}
+    for spec in selected:
+        if spec["kind"] != "encoded":
+            continue
+        layout = _encoded_initial_layout(physical_path)
+        tqc = transpile(
+            spec["circuit"],
+            backend=backend,
+            optimization_level=1,
+            seed_transpiler=seed_transpiler,
+            initial_layout=layout,
+        )
+        duration_estimates_dt[(int(spec["rounds"]), int(spec["logical_bit"]))] = int(tqc.duration or 0)
+
+    for spec in selected:
+        if spec["kind"] != "unencoded":
+            continue
+        key = (int(spec["rounds"]), int(spec["logical_bit"]))
+        total_delay_dt = int(duration_estimates_dt.get(key, max(0, spec["rounds"] * spec["delay_dt"])))
+        spec["total_delay_dt"] = total_delay_dt
+        spec["circuit"] = build_unencoded_memory_control_circuit(
+            rounds=spec["rounds"],
+            delay_dt=max(1, spec["delay_dt"]),
+            logical_bit=spec["logical_bit"],
+            total_delay_dt=total_delay_dt,
+        )
+
+    transpiled = []
+    for spec in selected:
+        if spec["kind"] == "encoded":
+            layout = _encoded_initial_layout(physical_path)
+        else:
+            layout = [_control_physical_qubit(physical_path, int(spec["control_data_index"]))]
+        tqc = transpile(
+            spec["circuit"],
+            backend=backend,
+            optimization_level=1,
+            seed_transpiler=seed_transpiler,
+            initial_layout=layout,
+        )
+        transpiled.append(tqc)
 
     transpile_rows = []
     for spec, tqc in zip(selected, transpiled):
@@ -363,25 +611,55 @@ def run_ibm_hardware_syndrome_validation(
                 "rounds": spec["rounds"],
                 "logical_bit": spec["logical_bit"],
                 "delay_dt": spec["delay_dt"],
+                "total_delay_dt": spec.get("total_delay_dt"),
+                "control_data_index": spec.get("control_data_index"),
                 "depth": int(tqc.depth()),
                 "size": int(tqc.size()),
                 "num_clbits": int(tqc.num_clbits),
+                "estimated_duration_dt": int(tqc.duration or 0),
                 "ops": {k: int(v) for k, v in tqc.count_ops().items()},
+                "layout": str(getattr(tqc, "layout", None)),
             }
         )
 
     sampler = SamplerV2(mode=backend)
+    scheduler_timing_enabled = False
+    try:
+        sampler.options.experimental = {"execution": {"scheduler_timing": True}}
+        scheduler_timing_enabled = True
+    except Exception:
+        scheduler_timing_enabled = False
+
     job = sampler.run(transpiled, shots=shots)
     sampler_result = job.result()
-    counts_list = [_extract_counts_from_sampler_pub(sampler_result[idx]) for idx in range(len(selected))]
+
+    counts_list = []
+    for idx, spec in enumerate(selected):
+        counts = _extract_counts_from_sampler_pub(sampler_result[idx], register_name="m")
+        _assert_counts_sum(counts, shots, spec["label"])
+        counts_list.append(counts)
 
     rows = []
     for idx, spec in enumerate(selected):
         counts = counts_list[idx]
-        successes = _successes_from_counts(spec, counts)
+        if spec["kind"] == "encoded":
+            eval_result = _evaluate_encoded_counts(spec, counts)
+        else:
+            eval_result = _evaluate_unencoded_counts(spec, counts)
 
-        success = successes / shots
-        ci_low, ci_high = _wilson_ci(successes=successes, shots=shots)
+        majority_successes = int(eval_result["majority_successes"])
+        history_successes = int(eval_result["history_successes"])
+
+        majority_success = majority_successes / shots
+        history_success = history_successes / shots
+
+        maj_ci_low, maj_ci_high = _wilson_ci(successes=majority_successes, shots=shots)
+        hist_ci_low, hist_ci_high = _wilson_ci(successes=history_successes, shots=shots)
+
+        error_rate = 1.0 - history_success
+        error_ci_low = 1.0 - hist_ci_high
+        error_ci_high = 1.0 - hist_ci_low
+
         rows.append(
             {
                 "layer": "layer3",
@@ -391,20 +669,59 @@ def run_ibm_hardware_syndrome_validation(
                 "rounds": spec["rounds"],
                 "logical_bit": spec["logical_bit"],
                 "delay_dt": spec["delay_dt"],
+                "total_delay_dt": spec.get("total_delay_dt"),
+                "control_data_index": spec.get("control_data_index"),
                 "shots": shots,
                 "backend": _backend_name(backend),
-                "successes": successes,
-                "logical_success_probability": success,
-                "logical_error_rate": 1.0 - success,
-                "ci95_low": ci_low,
-                "ci95_high": ci_high,
+                "successes": history_successes,
+                "logical_success_probability": history_success,
+                "logical_error_rate": error_rate,
+                "majority_successes": majority_successes,
+                "history_successes": history_successes,
+                "majority_success_probability": majority_success,
+                "history_success_probability": history_success,
+                "majority_error_rate": 1.0 - majority_success,
+                "history_error_rate": 1.0 - history_success,
+                "paired_both_correct": int(eval_result["paired_both_correct"]),
+                "paired_majority_only": int(eval_result["paired_majority_only"]),
+                "paired_history_only": int(eval_result["paired_history_only"]),
+                "paired_both_wrong": int(eval_result["paired_both_wrong"]),
+                "majority_success_ci95_low": maj_ci_low,
+                "majority_success_ci95_high": maj_ci_high,
+                "history_success_ci95_low": hist_ci_low,
+                "history_success_ci95_high": hist_ci_high,
+                "success_ci95_low": hist_ci_low,
+                "success_ci95_high": hist_ci_high,
+                "error_rate_ci95_low": error_ci_low,
+                "error_rate_ci95_high": error_ci_high,
+                "ci95_low": hist_ci_low,
+                "ci95_high": hist_ci_high,
             }
         )
 
-    ensure_project_dirs(Path(out_csv).resolve().parents[1])
-    out_csv = Path(out_csv)
-    out_csv.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).to_csv(out_csv, index=False)
+    run_csv, raw_counts_path, runtime_meta_path, run_dir = _unique_run_paths(out_csv, "syndrome_validation")
+    ensure_project_dirs(run_csv.resolve().parents[1])
+    pd.DataFrame(rows).to_csv(run_csv, index=False)
+
+    raw_counts_payload = {spec["label"]: dict(counts) for spec, counts in zip(selected, counts_list)}
+    raw_counts_path.write_text(json.dumps(raw_counts_payload, indent=2), encoding="utf-8")
+
+    circuits_dir = run_dir / "circuits"
+    circuits_dir.mkdir(parents=True, exist_ok=True)
+    for idx, spec in enumerate(selected):
+        with open(circuits_dir / f"{idx:02d}_{spec['label']}_original.qpy", "wb") as fh:
+            qpy.dump(spec["circuit"], fh)
+        with open(circuits_dir / f"{idx:02d}_{spec['label']}_transpiled.qpy", "wb") as fh:
+            qpy.dump(transpiled[idx], fh)
+
+    mapping = {
+        "physical_path_logical_order": list(physical_path),
+        "builder_qubit_order": ["data0", "data1", "data2", "anc0", "anc1"],
+        "flat_register": "m",
+        "syndrome_map_per_round": {"s01_index": "2*r", "s12_index": "2*r+1"},
+        "final_data_indices": {"d0": "2*rounds", "d1": "2*rounds+1", "d2": "2*rounds+2"},
+    }
+    (run_dir / "bit_mapping.json").write_text(json.dumps(mapping, indent=2), encoding="utf-8")
 
     out_transpile_json = Path(out_transpile_json)
     out_transpile_json.parent.mkdir(parents=True, exist_ok=True)
@@ -418,8 +735,17 @@ def run_ibm_hardware_syndrome_validation(
         "num_circuits": len(selected),
         "instance_provided": bool(instance),
         "transpile_summary": str(out_transpile_json),
+        "output_csv": str(run_csv),
+        "raw_counts_path": str(raw_counts_path),
+        "runtime_metadata": str(runtime_meta_path),
+        "run_dir": str(run_dir),
+        "scheduler_timing_enabled": scheduler_timing_enabled,
+        "seed_transpiler": seed_transpiler,
+        "physical_path_logical_order": list(physical_path),
+        "commit": _git_commit_hash(),
     }
     out_job_json = Path(out_job_json)
     out_job_json.parent.mkdir(parents=True, exist_ok=True)
     out_job_json.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    runtime_meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return meta

@@ -1,0 +1,23 @@
+{
+  "status": "completed",
+  "backend": "ibm_fez",
+  "job_id": "db1ar29b694s73ds23r0",
+  "shots": 2000,
+  "num_circuits": 16,
+  "instance_provided": true,
+  "transpile_summary": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_transpile_summary.json",
+  "output_csv": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T194840Z\\ibm_hardware_syndrome_validation_results.csv",
+  "raw_counts_path": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T194840Z\\raw_counts.json",
+  "runtime_metadata": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T194840Z\\runtime_metadata.json",
+  "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T194840Z",
+  "scheduler_timing_enabled": true,
+  "seed_transpiler": 7,
+  "physical_path_logical_order": [
+    0,
+    1,
+    2,
+    3,
+    16
+  ],
+  "commit": "53b4e254d2c38ddec30edc4a40885518dad9503b"
+}
