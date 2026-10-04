@@ -1,0 +1,9 @@
+{
+  "status": "completed",
+  "backend": "ibm_fez",
+  "job_id": "db0ph0ivog1s73fh5km0",
+  "shots": 1200,
+  "num_circuits": 6,
+  "instance_provided": true,
+  "transpile_summary": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_transpile_summary.json"
+}

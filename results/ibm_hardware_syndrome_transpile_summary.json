@@ -1,0 +1,105 @@
+[
+  {
+    "label": "encoded_r1_log0",
+    "kind": "encoded",
+    "rounds": 1,
+    "logical_bit": 0,
+    "delay_dt": 256,
+    "depth": 12,
+    "size": 26,
+    "num_clbits": 5,
+    "ops": {
+      "rz": 8,
+      "measure": 5,
+      "sx": 4,
+      "cz": 4,
+      "delay": 3,
+      "reset": 2
+    }
+  },
+  {
+    "label": "encoded_r1_log1",
+    "kind": "encoded",
+    "rounds": 1,
+    "logical_bit": 1,
+    "delay_dt": 256,
+    "depth": 12,
+    "size": 29,
+    "num_clbits": 5,
+    "ops": {
+      "rz": 8,
+      "measure": 5,
+      "sx": 4,
+      "cz": 4,
+      "x": 3,
+      "delay": 3,
+      "reset": 2
+    }
+  },
+  {
+    "label": "encoded_r3_log0",
+    "kind": "encoded",
+    "rounds": 3,
+    "logical_bit": 0,
+    "delay_dt": 256,
+    "depth": 32,
+    "size": 72,
+    "num_clbits": 9,
+    "ops": {
+      "rz": 24,
+      "sx": 12,
+      "cz": 12,
+      "delay": 9,
+      "measure": 9,
+      "reset": 6
+    }
+  },
+  {
+    "label": "encoded_r3_log1",
+    "kind": "encoded",
+    "rounds": 3,
+    "logical_bit": 1,
+    "delay_dt": 256,
+    "depth": 32,
+    "size": 75,
+    "num_clbits": 9,
+    "ops": {
+      "rz": 24,
+      "sx": 12,
+      "cz": 12,
+      "delay": 9,
+      "measure": 9,
+      "reset": 6,
+      "x": 3
+    }
+  },
+  {
+    "label": "unencoded_r3_log0",
+    "kind": "unencoded",
+    "rounds": 3,
+    "logical_bit": 0,
+    "delay_dt": 256,
+    "depth": 4,
+    "size": 4,
+    "num_clbits": 1,
+    "ops": {
+      "delay": 3,
+      "measure": 1
+    }
+  },
+  {
+    "label": "unencoded_r3_log1",
+    "kind": "unencoded",
+    "rounds": 3,
+    "logical_bit": 1,
+    "delay_dt": 256,
+    "depth": 5,
+    "size": 5,
+    "num_clbits": 1,
+    "ops": {
+      "delay": 3,
+      "x": 1,
+      "measure": 1
+    }
+  }
+]
