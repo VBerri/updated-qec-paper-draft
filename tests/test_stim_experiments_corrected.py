@@ -2,7 +2,26 @@ from pathlib import Path
 
 import pandas as pd
 
-from qec_stim.stim_experiments import run_heterogeneous_noise, run_temporal_drift
+from qec_stim.stim_experiments import run_bias_sweep, run_heterogeneous_noise, run_temporal_drift
+
+
+def test_bias_sweep_outputs_seed_and_failures(tmp_path: Path):
+    out_csv = tmp_path / "bias_corrected.csv"
+    df = run_bias_sweep(
+        shots=2000,
+        distances=(3,),
+        p_values=(0.01,),
+        bias_values=(0.1, 1.0),
+        seed=123,
+        out_csv=out_csv,
+    )
+
+    assert out_csv.exists()
+    assert "seed" in df.columns
+    assert "failures" in df.columns
+    assert int(df["failures"].min()) >= 0
+    assert int(df["failures"].max()) <= 2000
+    assert set(df["seed"].unique()) == {123}
 
 
 def test_heterogeneous_noise_same_mean_outputs(tmp_path: Path):

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .decoder_comparison import evaluate_decoders_on_shared_samples
-from .mwpm_decode import decode_logical_error_rate
+from .mwpm_decode import decode_logical_stats
 from .noise_models import (
     biased_pauli_rates,
 )
@@ -54,6 +54,7 @@ def run_bias_sweep(
     distances: Iterable[int],
     p_values: Iterable[float],
     bias_values: Iterable[float],
+    seed: int | None = None,
     out_csv: str | Path = "results/bias_sweep_results.csv",
 ) -> pd.DataFrame:
     rows = []
@@ -75,7 +76,7 @@ def run_bias_sweep(
                     p_reset_flip=p_reset,
                     p_two_qubit=p_two_qubit,
                 )
-                logical_error = decode_logical_error_rate(circuit, shots=shots)
+                stats = decode_logical_stats(circuit, shots=shots, seed=seed)
                 rows.append(
                     {
                         "layer": "layer2",
@@ -88,7 +89,9 @@ def run_bias_sweep(
                         "py": py,
                         "pz": pz,
                         "shots": shots,
-                        "logical_error_rate": logical_error,
+                        "seed": seed,
+                        "failures": int(stats["failures"]),
+                        "logical_error_rate": float(stats["logical_error_rate"]),
                     }
                 )
 

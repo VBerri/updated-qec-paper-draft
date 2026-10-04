@@ -54,6 +54,7 @@ def run_calibration_adaptive_decoder_experiment(
     rounds_list: Iterable[int] = (1, 3, 5, 7),
     snapshots: Iterable[dict[str, float | str]] | None = None,
     static_reference_snapshot: str = "monday",
+    seed: int | None = None,
     out_csv: str | Path = "results/calibration_adaptive_decoder_results.csv",
 ) -> pd.DataFrame:
     if shots <= 0:
@@ -87,7 +88,7 @@ def run_calibration_adaptive_decoder_experiment(
                     meas_factor=float(snapshot["meas_factor"]),
                 )
 
-                sampler = sample_circuit.compile_detector_sampler()
+                sampler = sample_circuit.compile_detector_sampler(seed=seed) if seed is not None else sample_circuit.compile_detector_sampler()
                 syndrome, actual = sampler.sample(shots, separate_observables=True)
 
                 predictions = {
@@ -112,6 +113,8 @@ def run_calibration_adaptive_decoder_experiment(
                             "rounds": rounds,
                             "shots": shots,
                             "method": method,
+                            "seed": seed,
+                            "failures": num_errors,
                             "logical_error_rate": logical_error,
                             "ci95_low": ci_low,
                             "ci95_high": ci_high,

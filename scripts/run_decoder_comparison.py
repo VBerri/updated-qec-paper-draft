@@ -23,6 +23,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run decoder comparison experiments.")
     parser.add_argument("--mode", choices=["quick", "full-local"], default="quick")
     parser.add_argument("--include-neural", action="store_true")
+    parser.add_argument("--seed", type=int, default=12345)
     args = parser.parse_args()
 
     shots, p_values, distances = mode_params(args.mode)
@@ -31,6 +32,7 @@ def main() -> None:
         distances=distances,
         p_values=p_values,
         include_neural=args.include_neural,
+        seed=args.seed,
         out_csv=ROOT / "results" / "decoder_comparison_results.csv",
     )
     plot_decoder_comparison(

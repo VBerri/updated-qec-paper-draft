@@ -25,6 +25,7 @@ def mode_params(mode: str):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run calibration-aware vs static decoder experiment on same syndrome data.")
     parser.add_argument("--mode", choices=["quick", "full-local"], default="quick")
+    parser.add_argument("--seed", type=int, default=12345)
     args = parser.parse_args()
 
     shots, distances, rounds_list = mode_params(args.mode)
@@ -35,6 +36,7 @@ def main() -> None:
         distances=distances,
         rounds_list=rounds_list,
         static_reference_snapshot="monday",
+        seed=args.seed,
         out_csv=out_csv,
     )
 

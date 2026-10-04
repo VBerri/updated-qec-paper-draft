@@ -22,6 +22,7 @@ def mode_params(mode: str):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run biased-noise sweeps in Stim.")
     parser.add_argument("--mode", choices=["quick", "full-local"], default="quick")
+    parser.add_argument("--seed", type=int, default=12345)
     args = parser.parse_args()
 
     shots, p_values, bias_values, distances = mode_params(args.mode)
@@ -30,6 +31,7 @@ def main() -> None:
         distances=distances,
         p_values=p_values,
         bias_values=bias_values,
+        seed=args.seed,
         out_csv=ROOT / "results" / "bias_sweep_results.csv",
     )
     plot_bias_results(

@@ -32,9 +32,9 @@ In short, the original baseline study established the main phenomenon: repetitio
 
 The second stage moved from simple majority decoding to a more realistic detector-model decoding approach. Instead of interpreting raw measurement outcomes with a simple majority rule, the Stim circuits were converted into a detector error model and decoded using a minimum-weight perfect matching algorithm.
 
-This stage was designed to answer a different but related question: how much of the observed performance difference comes from code size, and how much comes from decoder quality? The answer is substantial. The comparison showed that a detector-aware decoder greatly reduces the logical error rate relative to a simple majority-vote decoder, even when the underlying repetition-memory circuit family is otherwise comparable.
+This stage was designed to answer a different but related question: how much of the observed performance difference comes from code size, and how much comes from decoder quality? The corrected three-seed evidence confirms a large decoder-quality effect at the validated comparison point and is reported as an explicit slice rather than a full scaling proof.
 
-For example, at distance 11 and $p = 0.02$, the majority-vote decoder produced a logical error rate near 0.2244, while the detector-model MWPM decoder reduced the error rate to approximately 0.0006. This more than two-order-of-magnitude improvement demonstrates that decoder design is not a secondary detail; it is a major determinant of logical performance in realistic syndrome-based settings.
+At distance 11 and $p = 0.02$, pooled over three corrected seeds (300,000 total shots), the final-data-majority logical error rate is 0.054423 while the detector-model MWPM rate is 0.000853. This is a strong effect size at that operating point. Broader distance- and noise-wide superiority claims are deferred until the expanded multi-seed grid is fully reported with matched uncertainty summaries.
 
 The unweighted MWPM comparison further clarified the point. Because the weighted detector-model decoder uses syndrome-graph information more effectively than the unweighted variant, it provides a cleaner indication that the decoder should be interpreted as part of the physical performance story, not as a post-processing afterthought.
 

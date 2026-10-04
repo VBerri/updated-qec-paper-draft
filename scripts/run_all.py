@@ -135,6 +135,7 @@ def main() -> None:
             distances=cfg["distances"],
             p_values=cfg["stim_p_values"],
             bias_values=cfg["bias_values"],
+            seed=12345,
             out_csv=ROOT / "results" / "bias_sweep_results.csv",
         )
         plot_bias_results(
@@ -188,6 +189,7 @@ def main() -> None:
             distances=[d for d in cfg["distances"] if d in {3, 5, 7}],
             rounds_list=[1, 3, 5, 7],
             static_reference_snapshot="monday",
+            seed=12345,
             out_csv=ROOT / "results" / "calibration_adaptive_decoder_results.csv",
         )
         plot_calibration_adaptive_rounds(

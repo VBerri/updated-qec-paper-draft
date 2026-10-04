@@ -22,6 +22,7 @@ def mode_params(mode: str):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run temporal drift snapshot analysis.")
     parser.add_argument("--mode", choices=["quick", "full-local"], default="quick")
+    parser.add_argument("--seed", type=int, default=12345)
     args = parser.parse_args()
 
     shots, p_values, distances = mode_params(args.mode)
@@ -29,6 +30,7 @@ def main() -> None:
         shots=shots,
         distances=distances,
         p_values=p_values,
+        seed=args.seed,
         out_csv=ROOT / "results" / "temporal_drift_results.csv",
     )
     plot_temporal_drift(

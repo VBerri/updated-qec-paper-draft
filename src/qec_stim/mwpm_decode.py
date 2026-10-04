@@ -27,12 +27,24 @@ def matching_from_circuit(circuit: stim.Circuit, weight_mode: str = "detector_mo
     return uniform_matching
 
 
-def decode_logical_error_rate(circuit: stim.Circuit, shots: int) -> float:
+def decode_logical_stats(circuit: stim.Circuit, shots: int, seed: int | None = None) -> dict[str, int | float]:
+    if shots <= 0:
+        raise ValueError("shots must be positive")
+
     matching = matching_from_circuit(circuit, weight_mode="detector_model")
-    sampler = circuit.compile_detector_sampler()
+    sampler = circuit.compile_detector_sampler(seed=seed) if seed is not None else circuit.compile_detector_sampler()
     syndrome, actual_observables = sampler.sample(shots, separate_observables=True)
     predicted_observables = matching.decode_batch(syndrome)
-    return float(np.mean(predicted_observables != actual_observables))
+    failures = int(np.sum(predicted_observables != actual_observables))
+    return {
+        "failures": failures,
+        "logical_error_rate": float(failures / shots),
+    }
+
+
+def decode_logical_error_rate(circuit: stim.Circuit, shots: int, seed: int | None = None) -> float:
+    stats = decode_logical_stats(circuit=circuit, shots=shots, seed=seed)
+    return float(stats["logical_error_rate"])
 
 
 def decode_batch(circuit: stim.Circuit, shots: int):

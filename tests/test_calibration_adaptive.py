@@ -16,6 +16,10 @@ def test_calibration_adaptive_outputs_same_syndrome_metadata(tmp_path: Path):
     )
 
     assert out_csv.exists()
+    assert "seed" in df.columns
+    assert "failures" in df.columns
+    assert int(df["failures"].min()) >= 0
+    assert int(df["failures"].max()) <= 2000
     assert set(df["method"]) == {
         "detector_event_majority",
         "uniform_mwpm",
