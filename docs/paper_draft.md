@@ -40,13 +40,13 @@ The unweighted MWPM comparison further clarified the point. Because the weighted
 
 ## 5. Stage 3: IBM hardware validation
 
-The third stage targets a constrained and explicit question on IBM hardware: on a fixed five-qubit physical layout, how do final-data majority and syndrome-history decoding compare for a three-data-qubit repetition-memory protocol, and how do encoded outcomes compare against duration-matched unencoded controls. The protocol is computational-basis memory with offline decoding only.
+The third stage targets a constrained and explicit question on IBM hardware: on a fixed five-qubit physical layout, how do final-data majority and a syndrome-history heuristic decoder compare for a three-data-qubit repetition-memory protocol, and how do encoded outcomes compare against duration-matched unencoded controls. The protocol is computational-basis memory with offline decoding only.
 
 The hardware circuits use three data qubits and two ancillas, logical inputs 0 and 1, and both one-round and three-round syndrome extraction. For each encoded condition, matching unencoded controls are run on all three physical data-qubit positions with duration matching defined over the encoded memory interval. The analysis reports integer failures, shot totals, and confidence intervals from saved raw joint bitstring counts.
 
 This stage is intentionally not framed as arbitrary-state preservation, real-time error correction, or a threshold experiment. It is a controlled device-level validation focused on decoder comparison fairness (same-shot paired decoding for encoded circuits), explicit timing controls, and reproducible run provenance.
 
-In the completed campaign summary, history-aware decoding and final-data majority are close for one-round circuits and diverge more clearly at three rounds, especially for logical-1 preparations. At three rounds with delay-384, the pooled encoded error rates are 0.0464 (history-aware) versus 0.0359 (majority), while the mean duration-matched unencoded control error rate is 0.0156. These values are reported as observed hardware outcomes under the chosen layout and schedule, not as universal superiority claims.
+In the corrected timing workflow, each run directory includes an explicit timing-comparison table and rejects unscheduled-duration runs instead of substituting zero delay. The duration-matched control claim is therefore tied only to runs where encoded and unencoded transpiled durations are explicitly verified in saved metadata. Reported values should be interpreted as constrained, layout-specific observations rather than universal decoder-superiority claims.
 
 ## 6. Comparison across the three stages
 

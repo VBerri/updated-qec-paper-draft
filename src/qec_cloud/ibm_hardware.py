@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import random
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,148 @@ from qec_baseline.qiskit_circuits import (
     build_unencoded_memory_control_circuit,
 )
 from qec_stim.utils import ensure_project_dirs
+
+
+def _duration_dt_or_raise(circuit, label: str, backend=None) -> int:
+    duration = getattr(circuit, "duration", None)
+    if duration is None:
+        try:
+            duration = circuit.estimate_duration(target=getattr(backend, "target", None))
+        except Exception:
+            duration = None
+    if duration is None:
+        raise RuntimeError(
+            f"Transpiled circuit '{label}' has no scheduled duration. "
+            "Refusing to substitute zero for duration matching."
+        )
+    duration_dt = int(duration)
+    if duration_dt <= 0:
+        raise RuntimeError(
+            f"Transpiled circuit '{label}' has non-positive duration ({duration_dt} dt). "
+            "Duration-matched controls cannot be built from this result."
+        )
+    return duration_dt
+
+
+def _extract_pub_runtime_metadata(pub_result) -> dict[str, Any]:
+    meta = getattr(pub_result, "metadata", None)
+    if meta is None:
+        return {}
+    if isinstance(meta, dict):
+        return meta
+    try:
+        return dict(meta)
+    except Exception:
+        return {"raw_metadata": str(meta)}
+
+
+def _build_fault_injected_repetition_syndrome_circuit(
+    rounds: int,
+    delay_dt: int,
+    logical_bit: int,
+    data_fault_qubit: int | None = None,
+    data_fault_stage: int | None = None,
+    meas_fault_ancilla: int | None = None,
+    meas_fault_round: int | None = None,
+):
+    from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
+
+    data = QuantumRegister(3, "data")
+    anc = QuantumRegister(2, "anc")
+    memory = ClassicalRegister(2 * rounds + 3, "m")
+    qc = QuantumCircuit(data, anc, memory)
+
+    if logical_bit == 1:
+        qc.x(data)
+
+    for r in range(rounds):
+        if data_fault_qubit is not None and data_fault_stage == r:
+            qc.x(data[data_fault_qubit])
+
+        if delay_dt > 0:
+            for q in data:
+                qc.delay(delay_dt, q, unit="dt")
+
+        qc.cx(data[0], anc[0])
+        qc.cx(data[1], anc[0])
+        qc.cx(data[1], anc[1])
+        qc.cx(data[2], anc[1])
+
+        if meas_fault_ancilla is not None and meas_fault_round == r:
+            qc.x(anc[meas_fault_ancilla])
+
+        qc.measure(anc[0], memory[2 * r])
+        qc.measure(anc[1], memory[2 * r + 1])
+        qc.reset(anc)
+
+    if data_fault_qubit is not None and data_fault_stage == rounds:
+        qc.x(data[data_fault_qubit])
+
+    qc.measure(data[0], memory[2 * rounds + 0])
+    qc.measure(data[1], memory[2 * rounds + 1])
+    qc.measure(data[2], memory[2 * rounds + 2])
+    return qc
+
+
+def _transpile_for_hardware(circuit, backend, seed_transpiler: int, initial_layout):
+    return transpile(
+        circuit,
+        backend=backend,
+        optimization_level=1,
+        seed_transpiler=seed_transpiler,
+        initial_layout=initial_layout,
+        scheduling_method="asap",
+    )
+
+
+def _match_unencoded_duration(
+    *,
+    backend,
+    rounds: int,
+    logical_bit: int,
+    delay_dt_hint: int,
+    target_duration_dt: int,
+    seed_transpiler: int,
+    initial_layout,
+) -> tuple[Any, Any, int, int]:
+    probe = build_unencoded_memory_control_circuit(
+        rounds=rounds,
+        delay_dt=max(1, delay_dt_hint),
+        logical_bit=logical_bit,
+        total_delay_dt=0,
+    )
+    probe_tqc = _transpile_for_hardware(probe, backend, seed_transpiler=seed_transpiler, initial_layout=initial_layout)
+    base_duration = _duration_dt_or_raise(probe_tqc, label="unencoded_probe", backend=backend)
+
+    required_delay = target_duration_dt - base_duration
+    if required_delay < 0:
+        raise RuntimeError(
+            "Unencoded control base duration exceeds encoded target duration; "
+            "exact duration matching is impossible for this condition."
+        )
+
+    last_actual = base_duration
+    for _ in range(8):
+        circuit = build_unencoded_memory_control_circuit(
+            rounds=rounds,
+            delay_dt=max(1, delay_dt_hint),
+            logical_bit=logical_bit,
+            total_delay_dt=required_delay,
+        )
+        tqc = _transpile_for_hardware(circuit, backend, seed_transpiler=seed_transpiler, initial_layout=initial_layout)
+        actual = _duration_dt_or_raise(tqc, label="unencoded_matched", backend=backend)
+        last_actual = actual
+        delta = actual - target_duration_dt
+        if delta == 0:
+            return circuit, tqc, int(required_delay), int(actual)
+        required_delay -= delta
+        if required_delay < 0:
+            raise RuntimeError("Duration-matching iteration produced negative control delay.")
+
+    raise RuntimeError(
+        "Failed to construct exactly duration-matched unencoded control after iterative tuning "
+        f"(target={target_duration_dt} dt, final={last_actual} dt)."
+    )
 
 
 def _build_service(token: str | None, instance: str | None) -> QiskitRuntimeService:
@@ -178,9 +321,21 @@ def _normalize_corrected_specs(circuit_specs: Sequence[dict] | None, delay_dt: i
         if total_delay_dt is not None:
             total_delay_dt = int(total_delay_dt)
         control_data_index = int(spec.get("control_data_index", 0))
+        fault_model = spec.get("fault_model", None)
 
         if kind == "encoded":
-            circuit = build_repetition_syndrome_memory_circuit(rounds=rounds, delay_dt=this_delay, logical_bit=logical_bit)
+            if fault_model is None:
+                circuit = build_repetition_syndrome_memory_circuit(rounds=rounds, delay_dt=this_delay, logical_bit=logical_bit)
+            else:
+                circuit = _build_fault_injected_repetition_syndrome_circuit(
+                    rounds=rounds,
+                    delay_dt=this_delay,
+                    logical_bit=logical_bit,
+                    data_fault_qubit=fault_model.get("data_fault_qubit"),
+                    data_fault_stage=fault_model.get("data_fault_stage"),
+                    meas_fault_ancilla=fault_model.get("meas_fault_ancilla"),
+                    meas_fault_round=fault_model.get("meas_fault_round"),
+                )
         elif kind == "unencoded":
             circuit = build_unencoded_memory_control_circuit(
                 rounds=rounds,
@@ -200,6 +355,7 @@ def _normalize_corrected_specs(circuit_specs: Sequence[dict] | None, delay_dt: i
                 "delay_dt": this_delay,
                 "total_delay_dt": total_delay_dt,
                 "control_data_index": control_data_index,
+                "fault_model": fault_model,
                 "circuit": circuit,
             }
         )
@@ -208,6 +364,8 @@ def _normalize_corrected_specs(circuit_specs: Sequence[dict] | None, delay_dt: i
 
 def _bits_from_memory_str(memory_str: str) -> list[int]:
     cleaned = memory_str.replace(" ", "")
+    if any(ch not in {"0", "1"} for ch in cleaned):
+        raise ValueError(f"Non-binary record encountered: {memory_str!r}")
     return [int(ch) for ch in cleaned[::-1]]
 
 
@@ -544,6 +702,8 @@ def run_ibm_hardware_syndrome_validation(
     circuit_specs: Sequence[dict] | None = None,
     physical_path: Sequence[int] | None = None,
     seed_transpiler: int = 7,
+    shuffle_circuit_order: bool = False,
+    shuffle_seed: int = 31415,
     out_csv: str | Path = "results/ibm_hardware_syndrome_validation_results.csv",
     out_job_json: str | Path = "results/ibm_hardware_syndrome_validation_job_metadata.json",
     out_transpile_json: str | Path = "results/ibm_hardware_syndrome_transpile_summary.json",
@@ -560,32 +720,45 @@ def run_ibm_hardware_syndrome_validation(
 
     selected = _normalize_corrected_specs(circuit_specs=circuit_specs, delay_dt=delay_dt)
 
+    if shuffle_circuit_order:
+        rng = random.Random(shuffle_seed)
+        rng.shuffle(selected)
+
     duration_estimates_dt: dict[tuple[int, int], int] = {}
     for spec in selected:
         if spec["kind"] != "encoded":
             continue
         layout = _encoded_initial_layout(physical_path)
-        tqc = transpile(
-            spec["circuit"],
+        tqc = _transpile_for_hardware(spec["circuit"], backend, seed_transpiler=seed_transpiler, initial_layout=layout)
+        spec["_pretranspiled"] = tqc
+        duration_estimates_dt[(int(spec["rounds"]), int(spec["logical_bit"]))] = _duration_dt_or_raise(
+            tqc,
+            label=spec["label"],
             backend=backend,
-            optimization_level=1,
-            seed_transpiler=seed_transpiler,
-            initial_layout=layout,
         )
-        duration_estimates_dt[(int(spec["rounds"]), int(spec["logical_bit"]))] = int(tqc.duration or 0)
 
     for spec in selected:
         if spec["kind"] != "unencoded":
             continue
         key = (int(spec["rounds"]), int(spec["logical_bit"]))
-        total_delay_dt = int(duration_estimates_dt.get(key, max(0, spec["rounds"] * spec["delay_dt"])))
-        spec["total_delay_dt"] = total_delay_dt
-        spec["circuit"] = build_unencoded_memory_control_circuit(
-            rounds=spec["rounds"],
-            delay_dt=max(1, spec["delay_dt"]),
-            logical_bit=spec["logical_bit"],
-            total_delay_dt=total_delay_dt,
+        if key not in duration_estimates_dt:
+            raise RuntimeError(f"Missing encoded reference duration for control condition {key}")
+        target_duration_dt = int(duration_estimates_dt[key])
+        control_data_index = int(spec.get("control_data_index", 0))
+        layout = [_control_physical_qubit(physical_path, control_data_index)]
+        matched_circuit, matched_tqc, matched_total_delay_dt, matched_duration_dt = _match_unencoded_duration(
+            backend=backend,
+            rounds=int(spec["rounds"]),
+            logical_bit=int(spec["logical_bit"]),
+            delay_dt_hint=int(spec["delay_dt"]),
+            target_duration_dt=target_duration_dt,
+            seed_transpiler=seed_transpiler,
+            initial_layout=layout,
         )
+        spec["total_delay_dt"] = int(matched_total_delay_dt)
+        spec["circuit"] = matched_circuit
+        spec["_pretranspiled"] = matched_tqc
+        spec["transpiled_duration_dt"] = int(matched_duration_dt)
 
     transpiled = []
     for spec in selected:
@@ -593,13 +766,10 @@ def run_ibm_hardware_syndrome_validation(
             layout = _encoded_initial_layout(physical_path)
         else:
             layout = [_control_physical_qubit(physical_path, int(spec["control_data_index"]))]
-        tqc = transpile(
-            spec["circuit"],
-            backend=backend,
-            optimization_level=1,
-            seed_transpiler=seed_transpiler,
-            initial_layout=layout,
-        )
+        tqc = spec.get("_pretranspiled")
+        if tqc is None:
+            tqc = _transpile_for_hardware(spec["circuit"], backend, seed_transpiler=seed_transpiler, initial_layout=layout)
+        spec["transpiled_duration_dt"] = _duration_dt_or_raise(tqc, label=spec["label"], backend=backend)
         transpiled.append(tqc)
 
     transpile_rows = []
@@ -616,7 +786,7 @@ def run_ibm_hardware_syndrome_validation(
                 "depth": int(tqc.depth()),
                 "size": int(tqc.size()),
                 "num_clbits": int(tqc.num_clbits),
-                "estimated_duration_dt": int(tqc.duration or 0),
+                "estimated_duration_dt": int(spec["transpiled_duration_dt"]),
                 "ops": {k: int(v) for k, v in tqc.count_ops().items()},
                 "layout": str(getattr(tqc, "layout", None)),
             }
@@ -632,9 +802,16 @@ def run_ibm_hardware_syndrome_validation(
 
     job = sampler.run(transpiled, shots=shots)
     sampler_result = job.result()
+    job_metrics = {}
+    try:
+        job_metrics = job.metrics()
+    except Exception:
+        job_metrics = {}
 
     counts_list = []
+    per_pub_metadata = []
     for idx, spec in enumerate(selected):
+        per_pub_metadata.append(_extract_pub_runtime_metadata(sampler_result[idx]))
         counts = _extract_counts_from_sampler_pub(sampler_result[idx], register_name="m")
         _assert_counts_sum(counts, shots, spec["label"])
         counts_list.append(counts)
@@ -671,6 +848,11 @@ def run_ibm_hardware_syndrome_validation(
                 "delay_dt": spec["delay_dt"],
                 "total_delay_dt": spec.get("total_delay_dt"),
                 "control_data_index": spec.get("control_data_index"),
+                "transpiled_duration_dt": int(spec["transpiled_duration_dt"]),
+                "duration_match_delta_dt": int(
+                    spec["transpiled_duration_dt"]
+                    - duration_estimates_dt.get((int(spec["rounds"]), int(spec["logical_bit"])), int(spec["transpiled_duration_dt"]))
+                ),
                 "shots": shots,
                 "backend": _backend_name(backend),
                 "successes": history_successes,
@@ -723,9 +905,74 @@ def run_ibm_hardware_syndrome_validation(
     }
     (run_dir / "bit_mapping.json").write_text(json.dumps(mapping, indent=2), encoding="utf-8")
 
+    run_transpile_summary = run_dir / "transpile_summary.json"
+    run_transpile_summary.write_text(json.dumps(transpile_rows, indent=2), encoding="utf-8")
+
     out_transpile_json = Path(out_transpile_json)
     out_transpile_json.parent.mkdir(parents=True, exist_ok=True)
     out_transpile_json.write_text(json.dumps(transpile_rows, indent=2), encoding="utf-8")
+
+    dt_seconds = None
+    try:
+        cfg = backend.configuration()
+        dt_seconds = getattr(cfg, "dt", None)
+    except Exception:
+        dt_seconds = None
+
+    calibration = {
+        "backend_properties_last_update": None,
+        "data_qubit_metrics": {},
+        "path_cx_metrics": {},
+    }
+    try:
+        props = backend.properties()
+        calibration["backend_properties_last_update"] = str(getattr(props, "last_update_date", None))
+        path = list(physical_path)
+        data_phys = [path[0], path[2], path[4]]
+        for q in data_phys:
+            qprops = {item.name: item.value for item in props.qubits[q]}
+            calibration["data_qubit_metrics"][str(q)] = {
+                "T1": qprops.get("T1"),
+                "T2": qprops.get("T2"),
+                "readout_error": qprops.get("readout_error"),
+            }
+        path_edges = [(path[0], path[1]), (path[1], path[2]), (path[2], path[3]), (path[3], path[4])]
+        for a, b in path_edges:
+            gate_vals = None
+            try:
+                gate_vals = props.gate_property("cx", [a, b])
+            except Exception:
+                try:
+                    gate_vals = props.gate_property("cx", [b, a])
+                except Exception:
+                    gate_vals = None
+            calibration["path_cx_metrics"][f"{a}-{b}"] = {
+                "gate_error": (gate_vals.get("gate_error", [None])[0] if gate_vals else None),
+                "gate_length": (gate_vals.get("gate_length", [None])[0] if gate_vals else None),
+            }
+    except Exception:
+        pass
+
+    timing_table = []
+    for spec in selected:
+        key = (int(spec["rounds"]), int(spec["logical_bit"]))
+        encoded_ref_dt = int(duration_estimates_dt.get(key, spec["transpiled_duration_dt"]))
+        duration_dt = int(spec["transpiled_duration_dt"])
+        row = {
+            "label": spec["label"],
+            "kind": spec["kind"],
+            "rounds": int(spec["rounds"]),
+            "logical_bit": int(spec["logical_bit"]),
+            "reference_encoded_duration_dt": encoded_ref_dt,
+            "actual_duration_dt": duration_dt,
+            "duration_match_delta_dt": int(duration_dt - encoded_ref_dt),
+            "dt_seconds": dt_seconds,
+            "reference_encoded_duration_seconds": (encoded_ref_dt * dt_seconds) if dt_seconds else None,
+            "actual_duration_seconds": (duration_dt * dt_seconds) if dt_seconds else None,
+            "duration_match_delta_seconds": ((duration_dt - encoded_ref_dt) * dt_seconds) if dt_seconds else None,
+        }
+        timing_table.append(row)
+    (run_dir / "timing_comparison.json").write_text(json.dumps(timing_table, indent=2), encoding="utf-8")
 
     meta = {
         "status": "completed",
@@ -740,8 +987,16 @@ def run_ibm_hardware_syndrome_validation(
         "runtime_metadata": str(runtime_meta_path),
         "run_dir": str(run_dir),
         "scheduler_timing_enabled": scheduler_timing_enabled,
+        "scheduler_timing_returned": any(bool(m) for m in per_pub_metadata),
+        "scheduler_pub_metadata": per_pub_metadata,
+        "job_metrics": job_metrics,
         "seed_transpiler": seed_transpiler,
         "physical_path_logical_order": list(physical_path),
+        "dt_seconds": dt_seconds,
+        "timing_comparison_path": str(run_dir / "timing_comparison.json"),
+        "run_transpile_summary": str(run_transpile_summary),
+        "calibration": calibration,
+        "decoder_description": "history_based_heuristic_dynamic_programming",
         "commit": _git_commit_hash(),
     }
     out_job_json = Path(out_job_json)

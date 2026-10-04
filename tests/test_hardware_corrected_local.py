@@ -155,7 +155,9 @@ def test_selected_two_fault_histories_use_timing_information():
     bits_b = [0, 0, 0, 0, 0, 1, 0, 1, 0]
 
     assert _decode_final_data_majority_bit(bits_a, rounds=rounds) == _decode_final_data_majority_bit(bits_b, rounds=rounds)
-    assert _decode_history_matching_bit(bits_a, rounds=rounds) != _decode_history_matching_bit(bits_b, rounds=rounds)
+    # These fixtures pin expected outputs for two histories with identical final data bits.
+    assert _decode_history_matching_bit(bits_a, rounds=rounds) == 0
+    assert _decode_history_matching_bit(bits_b, rounds=rounds) == 1
 
 
 def test_invalid_or_truncated_records_raise():
@@ -167,6 +169,12 @@ def test_invalid_or_truncated_records_raise():
 
     try:
         _decode_unencoded_shot([], prepared_logical_bit=0)
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+    try:
+        _bits_from_memory_str("010210")
         assert False, "expected ValueError"
     except ValueError:
         pass

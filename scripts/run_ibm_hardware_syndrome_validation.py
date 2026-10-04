@@ -21,6 +21,12 @@ def main() -> None:
         help="Five physical qubit IDs in logical order data0,anc0,data1,anc1,data2 (for example: 12,15,18,21,24).",
     )
     parser.add_argument("--seed-transpiler", type=int, default=7, help="Fixed transpiler seed for reproducibility.")
+    parser.add_argument(
+        "--shuffle-circuit-order",
+        action="store_true",
+        help="Shuffle circuit execution order for time-interleaving across conditions.",
+    )
+    parser.add_argument("--shuffle-seed", type=int, default=31415, help="Deterministic seed for circuit order shuffle.")
     args = parser.parse_args()
     physical_path = [int(x.strip()) for x in args.physical_path.split(",") if x.strip()]
 
@@ -30,6 +36,8 @@ def main() -> None:
         delay_dt=args.delay_dt,
         physical_path=physical_path,
         seed_transpiler=args.seed_transpiler,
+        shuffle_circuit_order=args.shuffle_circuit_order,
+        shuffle_seed=args.shuffle_seed,
         out_csv=ROOT / "results" / "ibm_hardware_syndrome_validation_results.csv",
         out_job_json=ROOT / "results" / "ibm_hardware_syndrome_validation_job_metadata.json",
         out_transpile_json=ROOT / "results" / "ibm_hardware_syndrome_transpile_summary.json",
