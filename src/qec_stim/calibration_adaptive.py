@@ -91,10 +91,10 @@ def run_calibration_adaptive_decoder_experiment(
                 syndrome, actual = sampler.sample(shots, separate_observables=True)
 
                 predictions = {
-                    "majority_vote": _majority_from_syndrome(syndrome),
+                    "detector_event_majority": _majority_from_syndrome(syndrome),
                     "uniform_mwpm": decode_syndrome_batch(sample_circuit, syndrome, weight_mode="uniform"),
                     "static_weighted_mwpm": decode_syndrome_batch(static_circuit, syndrome, weight_mode="detector_model"),
-                    "calibration_aware_mwpm": decode_syndrome_batch(sample_circuit, syndrome, weight_mode="detector_model"),
+                    "oracle_informed_mwpm": decode_syndrome_batch(sample_circuit, syndrome, weight_mode="detector_model"),
                 }
 
                 shared_group = f"{snapshot_name}_d{d}_r{rounds}"
@@ -138,12 +138,12 @@ def summarize_calibration_gain(df: pd.DataFrame) -> pd.DataFrame:
         aggfunc="mean",
     ).reset_index()
 
-    if "static_weighted_mwpm" not in pivot or "calibration_aware_mwpm" not in pivot:
-        raise ValueError("Data frame must include both static_weighted_mwpm and calibration_aware_mwpm")
+    if "static_weighted_mwpm" not in pivot or "oracle_informed_mwpm" not in pivot:
+        raise ValueError("Data frame must include both static_weighted_mwpm and oracle_informed_mwpm")
 
-    pivot["adaptive_minus_static"] = pivot["calibration_aware_mwpm"] - pivot["static_weighted_mwpm"]
+    pivot["adaptive_minus_static"] = pivot["oracle_informed_mwpm"] - pivot["static_weighted_mwpm"]
     pivot["relative_improvement_vs_static"] = (
-        (pivot["static_weighted_mwpm"] - pivot["calibration_aware_mwpm"])
+        (pivot["static_weighted_mwpm"] - pivot["oracle_informed_mwpm"])
         / np.clip(pivot["static_weighted_mwpm"], 1e-12, None)
     )
     return pivot

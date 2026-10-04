@@ -57,10 +57,17 @@ def _final_data_majority_from_measurements(
     final_data_cols: list[int],
     prepared_logical_bit: int = 0,
 ) -> np.ndarray:
+    """Return the decoded logical bit from the final data readout.
+
+    The majority vote is a logical-bit prediction, not a failure flag. The scorer
+    compares it to the prepared logical state for this method, while MWPM and
+    related decoders are compared against the observable outcome reconstructed from
+    the sampled detector record.
+    """
+    del prepared_logical_bit
     final_data = measurements[:, final_data_cols].astype(np.uint8)
     logical_bit = (np.sum(final_data, axis=1) > (final_data.shape[1] / 2.0)).astype(np.uint8)
-    predicted_observable_flip = (logical_bit != prepared_logical_bit).astype(np.uint8)
-    return predicted_observable_flip.reshape(-1, 1)
+    return logical_bit.reshape(-1, 1)
 
 
 def evaluate_decoders_on_shared_samples(
@@ -104,7 +111,11 @@ def evaluate_decoders_on_shared_samples(
     pairwise_rows = []
     failure_masks = {}
     for method, pred in method_predictions:
-        fail_mask = (pred != actual).reshape(-1)
+        pred_vec = pred.reshape(-1)
+        if method == "final_data_majority":
+            fail_mask = pred_vec != prepared_logical_bit
+        else:
+            fail_mask = pred_vec != actual.reshape(-1)
         failure_masks[method] = fail_mask
         failures = int(np.sum(fail_mask))
         method_rows.append(

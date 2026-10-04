@@ -1,0 +1,7 @@
+layer,experiment,distance,rounds,p,shots,seed,left_method,right_method,left_only_failures,right_only_failures,both_failures,both_success
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,final_data_majority,detector_count_heuristic,2747,20280,2676,74297
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,final_data_majority,unweighted_mwpm,5372,97,51,94480
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,final_data_majority,mwpm,5382,41,41,94536
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,detector_count_heuristic,unweighted_mwpm,22871,63,85,76981
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,detector_count_heuristic,mwpm,22917,43,39,77001
+layer2,decoder_comparison_pairwise,11,11,0.02,100000,202,unweighted_mwpm,mwpm,95,29,53,99823

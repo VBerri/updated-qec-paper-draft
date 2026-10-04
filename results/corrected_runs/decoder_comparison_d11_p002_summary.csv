@@ -1,0 +1,13 @@
+method,shots,seed,failures,logical_error_rate
+final_data_majority,100000,101,5518,0.05518
+detector_count_heuristic,100000,101,23037,0.23037
+unweighted_mwpm,100000,101,168,0.00168
+mwpm,100000,101,98,0.00098
+final_data_majority,100000,202,5423,0.05423
+detector_count_heuristic,100000,202,22956,0.22956
+unweighted_mwpm,100000,202,148,0.00148
+mwpm,100000,202,82,0.00082
+final_data_majority,100000,303,5386,0.05386
+detector_count_heuristic,100000,303,23123,0.23123
+unweighted_mwpm,100000,303,152,0.00152
+mwpm,100000,303,76,0.00076

@@ -1,0 +1,7 @@
+layer,experiment,label,basis,code_size,idle_steps,shots,backend,logical_success_probability,logical_error_rate
+layer3,ibm_hardware_validation,z_idle_8,Z,3,8,12000,ibm_fez,0.9999166666666667,8.333333333332416e-05
+layer3,ibm_hardware_validation,z_idle_16,Z,3,16,12000,ibm_fez,0.9999166666666667,8.333333333332416e-05
+layer3,ibm_hardware_validation,z_idle_32,Z,3,32,12000,ibm_fez,0.9999166666666667,8.333333333332416e-05
+layer3,ibm_hardware_validation,x_idle_8,X,3,8,12000,ibm_fez,0.9999166666666667,8.333333333332416e-05
+layer3,ibm_hardware_validation,x_idle_16,X,3,16,12000,ibm_fez,0.9999166666666667,8.333333333332416e-05
+layer3,ibm_hardware_validation,x_idle_32,X,3,32,12000,ibm_fez,0.99975,0.00024999999999997247

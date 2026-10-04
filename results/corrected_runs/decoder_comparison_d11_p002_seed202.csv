@@ -1,0 +1,5 @@
+layer,experiment,distance,rounds,p,method,shots,seed,failures,logical_error_rate
+layer2,decoder_comparison,11,11,0.02,final_data_majority,100000,202,5423,0.05423
+layer2,decoder_comparison,11,11,0.02,detector_count_heuristic,100000,202,22956,0.22956
+layer2,decoder_comparison,11,11,0.02,unweighted_mwpm,100000,202,148,0.00148
+layer2,decoder_comparison,11,11,0.02,mwpm,100000,202,82,0.00082

@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from qec_stim.decoder_comparison import run_decoder_comparison
+import numpy as np
+
+from qec_stim.decoder_comparison import _final_data_majority_from_measurements, run_decoder_comparison
 
 
 def test_decoder_comparison_outputs(tmp_path: Path):
@@ -23,3 +25,17 @@ def test_decoder_comparison_outputs(tmp_path: Path):
     pivot = df.pivot_table(index=["distance", "p"], columns="method", values="logical_error_rate")
     row = pivot.loc[(5, 0.05)]
     assert row["mwpm"] <= row["unweighted_mwpm"]
+
+
+def test_final_data_majority_returns_decoded_bit_not_failure_mask():
+    measurements = np.array(
+        [[0, 0, 1],
+         [1, 1, 1]],
+        dtype=np.uint8,
+    )
+    pred = _final_data_majority_from_measurements(
+        measurements,
+        final_data_cols=[0, 1, 2],
+        prepared_logical_bit=1,
+    )
+    assert pred.reshape(-1).tolist() == [0, 1]

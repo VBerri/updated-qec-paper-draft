@@ -1,0 +1,7 @@
+layer,experiment,label,kind,rounds,logical_bit,delay_dt,shots,backend,successes,logical_success_probability,logical_error_rate,ci95_low,ci95_high
+layer3,ibm_hardware_syndrome_validation,encoded_r1_log0,encoded,1,0,256,1200,ibm_fez,1200,1.0,0.0,0.9968088824974979,0.9999999999999998
+layer3,ibm_hardware_syndrome_validation,encoded_r1_log1,encoded,1,1,256,1200,ibm_fez,1188,0.99,0.010000000000000009,0.9826022237812596,0.9942704810662885
+layer3,ibm_hardware_syndrome_validation,encoded_r3_log0,encoded,3,0,256,1200,ibm_fez,1200,1.0,0.0,0.9968088824974979,0.9999999999999998
+layer3,ibm_hardware_syndrome_validation,encoded_r3_log1,encoded,3,1,256,1200,ibm_fez,1164,0.97,0.030000000000000027,0.9587476881662002,0.9782526613814478
+layer3,ibm_hardware_syndrome_validation,unencoded_r3_log0,unencoded,3,0,256,1200,ibm_fez,1191,0.9925,0.007499999999999951,0.9858074482282013,0.9960493010318343
+layer3,ibm_hardware_syndrome_validation,unencoded_r3_log1,unencoded,3,1,256,1200,ibm_fez,1080,0.9,0.09999999999999998,0.8817285569068684,0.91571854909113

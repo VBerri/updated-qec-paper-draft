@@ -5,8 +5,8 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ipynb_checkpoints/
-results/*.csv
-results/**/*.csv
+# Results CSVs are kept in the repository as evidence artifacts.
+# The project intentionally tracks corrected run outputs and pairwise summaries.
 figures/*.png
 logs/*.log
 !results/.gitkeep

@@ -17,10 +17,10 @@ def test_calibration_adaptive_outputs_same_syndrome_metadata(tmp_path: Path):
 
     assert out_csv.exists()
     assert set(df["method"]) == {
-        "majority_vote",
+        "detector_event_majority",
         "uniform_mwpm",
         "static_weighted_mwpm",
-        "calibration_aware_mwpm",
+        "oracle_informed_mwpm",
     }
 
     counts = df.groupby(["snapshot", "distance", "rounds"])["same_syndrome_group"].nunique()

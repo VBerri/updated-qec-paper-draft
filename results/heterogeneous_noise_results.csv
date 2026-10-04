@@ -1,0 +1,13 @@
+layer,experiment,distance,rounds,p_mean,scenario,effective_p_mean,effective_p_std,defect_index,shots,seed,method,failures,logical_error_rate
+layer2,heterogeneous_noise_same_mean,5,5,0.01,uniform_control,0.01,0.0,0,5000,123,final_data_majority,4,0.0008
+layer2,heterogeneous_noise_same_mean,5,5,0.01,uniform_control,0.01,0.0,0,5000,123,unweighted_mwpm,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,uniform_control,0.01,0.0,0,5000,123,mwpm_nominal_uniform_model,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,uniform_control,0.01,0.0,0,5000,123,mwpm_oracle_heterogeneous_model,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_edge,0.009999999999999998,0.0075,0,5000,123,final_data_majority,7,0.0014
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_edge,0.009999999999999998,0.0075,0,5000,123,unweighted_mwpm,1,0.0002
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_edge,0.009999999999999998,0.0075,0,5000,123,mwpm_nominal_uniform_model,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_edge,0.009999999999999998,0.0075,0,5000,123,mwpm_oracle_heterogeneous_model,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_center,0.01,0.0075000000000000015,2,5000,123,final_data_majority,4,0.0008
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_center,0.01,0.0075000000000000015,2,5000,123,unweighted_mwpm,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_center,0.01,0.0075000000000000015,2,5000,123,mwpm_nominal_uniform_model,0,0.0
+layer2,heterogeneous_noise_same_mean,5,5,0.01,local_defect_center,0.01,0.0075000000000000015,2,5000,123,mwpm_oracle_heterogeneous_model,0,0.0

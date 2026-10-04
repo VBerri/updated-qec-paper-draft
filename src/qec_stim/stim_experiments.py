@@ -103,6 +103,7 @@ def run_heterogeneous_noise(
     out_csv: str | Path = "results/heterogeneous_noise_results.csv",
 ) -> pd.DataFrame:
     rows = []
+    pairwise_rows = []
 
     def _same_mean_local_defect_rates(distance: int, p_mean: float, defect_index: int, defect_factor: float = 2.5):
         if distance <= 1:
@@ -147,7 +148,7 @@ def run_heterogeneous_noise(
                     final_measure_flip=0.001,
                 )
 
-                method_rows, _ = evaluate_decoders_on_shared_samples(
+                method_rows, pairwise = evaluate_decoders_on_shared_samples(
                     sampling_circuit=heterogeneous_circuit,
                     decoder_circuits={
                         "unweighted_mwpm": heterogeneous_circuit,
@@ -178,11 +179,33 @@ def run_heterogeneous_noise(
                             **m,
                         }
                     )
+                for pw in pairwise:
+                    pairwise_rows.append(
+                        {
+                            "layer": "layer2",
+                            "experiment": "heterogeneous_noise_same_mean_pairwise",
+                            "distance": d,
+                            "rounds": rounds,
+                            "p_mean": p_mean,
+                            "scenario": scenario_name,
+                            "effective_p_mean": float(np.mean(data_rates)),
+                            "effective_p_std": float(np.std(data_rates)),
+                            "defect_index": int(np.argmax(data_rates)),
+                            "shots": shots,
+                            "seed": seed,
+                            **pw,
+                        }
+                    )
 
     df = pd.DataFrame(rows)
     out_path = Path(out_csv)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_path, index=False)
+
+    pairwise_df = pd.DataFrame(pairwise_rows)
+    if not pairwise_df.empty:
+        pairwise_out = out_path.with_name(f"{out_path.stem}_pairwise{out_path.suffix}")
+        pairwise_df.to_csv(pairwise_out, index=False)
     return df
 
 
@@ -194,6 +217,7 @@ def run_temporal_drift(
     out_csv: str | Path = "results/temporal_drift_results.csv",
 ) -> pd.DataFrame:
     rows = []
+    pairwise_rows = []
     for d in distances:
         rounds = 10
         for p_mean in p_values:
@@ -227,7 +251,7 @@ def run_temporal_drift(
                     final_measure_flip=float(measurement_schedule[-1]),
                 )
 
-                method_rows, _ = evaluate_decoders_on_shared_samples(
+                method_rows, pairwise = evaluate_decoders_on_shared_samples(
                     sampling_circuit=true_schedule_circuit,
                     decoder_circuits={
                         "unweighted_mwpm": true_schedule_circuit,
@@ -259,9 +283,32 @@ def run_temporal_drift(
                             **m,
                         }
                     )
+                for pw in pairwise:
+                    pairwise_rows.append(
+                        {
+                            "layer": "layer2",
+                            "experiment": "temporal_drift_schedule_pairwise",
+                            "distance": d,
+                            "rounds": rounds,
+                            "p_mean": p_mean,
+                            "snapshot": scenario_name,
+                            "schedule_data_mean": float(np.mean(data_schedule)),
+                            "schedule_data_std": float(np.std(data_schedule)),
+                            "schedule_meas_mean": float(np.mean(measurement_schedule)),
+                            "schedule_meas_std": float(np.std(measurement_schedule)),
+                            "shots": shots,
+                            "seed": seed,
+                            **pw,
+                        }
+                    )
 
     df = pd.DataFrame(rows)
     out_path = Path(out_csv)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_path, index=False)
+
+    pairwise_df = pd.DataFrame(pairwise_rows)
+    if not pairwise_df.empty:
+        pairwise_out = out_path.with_name(f"{out_path.stem}_pairwise{out_path.suffix}")
+        pairwise_df.to_csv(pairwise_out, index=False)
     return df

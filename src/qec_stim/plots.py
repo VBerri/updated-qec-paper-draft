@@ -221,18 +221,18 @@ def plot_calibration_adaptive_rounds(
 ) -> None:
     df = pd.read_csv(csv_path)
     method_labels = {
-        "majority_vote": "Majority vote",
+        "detector_event_majority": "Detector-event majority",
         "uniform_mwpm": "Uniform MWPM",
         "static_weighted_mwpm": "Static weighted MWPM",
-        "calibration_aware_mwpm": "Calibration-aware MWPM",
+        "oracle_informed_mwpm": "Oracle-informed MWPM",
     }
     method_order = [
         m
         for m in [
-            "majority_vote",
+            "detector_event_majority",
             "uniform_mwpm",
             "static_weighted_mwpm",
-            "calibration_aware_mwpm",
+            "oracle_informed_mwpm",
         ]
         if m in set(df["method"])
     ]
