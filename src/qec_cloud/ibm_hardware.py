@@ -116,53 +116,67 @@ def _transpile_for_hardware(circuit, backend, seed_transpiler: int, initial_layo
     )
 
 
-def _match_unencoded_duration(
+def _scheduled_memory_interval_dt(tqc, physical_qubit: int, logical_bit: int, durations) -> int:
+    """Preparation-end to final-measurement-start interval (dt) for one physical qubit.
+
+    This is the qubit's actual memory exposure, not the total scheduled circuit duration.
+    """
+    starts = getattr(tqc, "op_start_times", None)
+    if starts is None:
+        raise RuntimeError("Scheduled circuit is missing op_start_times; transpile with scheduling_method='asap'.")
+    x_end = None
+    meas_start = None
+    for inst, start in zip(tqc.data, starts):
+        q_indices = [tqc.find_bit(q).index for q in inst.qubits]
+        if physical_qubit not in q_indices:
+            continue
+        name = inst.operation.name
+        if name == "measure":
+            meas_start = int(start) if meas_start is None else min(meas_start, int(start))
+        elif name == "x" and logical_bit == 1:
+            x_dur = int(durations.get("x", [physical_qubit], unit="dt"))
+            end = int(start) + x_dur
+            x_end = end if x_end is None else min(x_end, end)
+    if meas_start is None:
+        raise RuntimeError(f"No measurement found on physical qubit {physical_qubit} in scheduled circuit.")
+    prep_end = 0 if logical_bit == 0 else (x_end if x_end is not None else 0)
+    return int(meas_start - prep_end)
+
+
+def _match_control_memory_interval(
     *,
     backend,
     rounds: int,
     logical_bit: int,
     delay_dt_hint: int,
-    target_duration_dt: int,
+    target_interval_dt: int,
+    physical_qubit: int,
     seed_transpiler: int,
-    initial_layout,
-) -> tuple[Any, Any, int, int]:
-    probe = build_unencoded_memory_control_circuit(
-        rounds=rounds,
-        delay_dt=max(1, delay_dt_hint),
-        logical_bit=logical_bit,
-        total_delay_dt=0,
-    )
-    probe_tqc = _transpile_for_hardware(probe, backend, seed_transpiler=seed_transpiler, initial_layout=initial_layout)
-    base_duration = _duration_dt_or_raise(probe_tqc, label="unencoded_probe", backend=backend)
-
-    required_delay = target_duration_dt - base_duration
-    if required_delay < 0:
-        raise RuntimeError(
-            "Unencoded control base duration exceeds encoded target duration; "
-            "exact duration matching is impossible for this condition."
-        )
-
-    last_actual = base_duration
-    for _ in range(8):
+    durations,
+) -> tuple[Any, Any, int, int, int]:
+    """Build a single-qubit control whose prep-to-measurement interval equals the encoded target."""
+    layout = [int(physical_qubit)]
+    required = int(target_interval_dt)
+    last = None
+    for _ in range(16):
+        required = max(0, required)
         circuit = build_unencoded_memory_control_circuit(
             rounds=rounds,
             delay_dt=max(1, delay_dt_hint),
             logical_bit=logical_bit,
-            total_delay_dt=required_delay,
+            total_delay_dt=required,
         )
-        tqc = _transpile_for_hardware(circuit, backend, seed_transpiler=seed_transpiler, initial_layout=initial_layout)
-        actual = _duration_dt_or_raise(tqc, label="unencoded_matched", backend=backend)
-        last_actual = actual
-        delta = actual - target_duration_dt
+        tqc = _transpile_for_hardware(circuit, backend, seed_transpiler=seed_transpiler, initial_layout=layout)
+        interval = _scheduled_memory_interval_dt(tqc, int(physical_qubit), logical_bit, durations)
+        last = interval
+        delta = interval - int(target_interval_dt)
         if delta == 0:
-            return circuit, tqc, int(required_delay), int(actual)
-        required_delay -= delta
-        if required_delay < 0:
-            raise RuntimeError("Duration-matching iteration produced negative control delay.")
-
+            total_dt = _duration_dt_or_raise(tqc, label="unencoded_matched", backend=backend)
+            return circuit, tqc, int(required), int(interval), int(total_dt)
+        required -= delta
     raise RuntimeError(
-        "Failed to construct exactly duration-matched unencoded control after iterative tuning "
-        f"(target={target_duration_dt} dt, final={last_actual} dt)."
+        "Failed to match control memory interval exactly after iterative tuning "
+        f"(target={target_interval_dt} dt, last={last} dt)."
     )
 
 
@@ -604,6 +618,22 @@ def _control_physical_qubit(path_five: Sequence[int], control_data_index: int) -
     return int([path_five[0], path_five[2], path_five[4]][control_data_index])
 
 
+def _measured_physical_qubits_from_circuit(circuit) -> list[int]:
+    qubits: set[int] = set()
+    for inst in circuit.data:
+        if inst.operation.name == "measure":
+            for q in inst.qubits:
+                qubits.add(int(circuit.find_bit(q).index))
+    return sorted(qubits)
+
+
+def _expected_measured_physical_qubits(spec: dict, physical_path: Sequence[int]) -> list[int]:
+    path = [int(x) for x in physical_path]
+    if spec["kind"] == "encoded":
+        return sorted(set(path))
+    return [int(_control_physical_qubit(path, int(spec.get("control_data_index", 0))))]
+
+
 def validate_ibm_environment() -> tuple[str | None, str | None]:
     token = os.getenv("IBM_QUANTUM_TOKEN")
     instance = os.getenv("IBM_QUANTUM_INSTANCE")
@@ -724,44 +754,62 @@ def run_ibm_hardware_syndrome_validation(
         rng = random.Random(shuffle_seed)
         rng.shuffle(selected)
 
+    try:
+        durations = backend.target.durations()
+    except Exception as exc:
+        raise RuntimeError("Backend target durations unavailable; cannot compute memory intervals.") from exc
+
     duration_estimates_dt: dict[tuple[int, int], int] = {}
+    encoded_intervals: dict[tuple[int, int], dict[int, int]] = {}
     for spec in selected:
         if spec["kind"] != "encoded":
             continue
         layout = _encoded_initial_layout(physical_path)
         tqc = _transpile_for_hardware(spec["circuit"], backend, seed_transpiler=seed_transpiler, initial_layout=layout)
         spec["_pretranspiled"] = tqc
-        duration_estimates_dt[(int(spec["rounds"]), int(spec["logical_bit"]))] = _duration_dt_or_raise(
+        key = (int(spec["rounds"]), int(spec["logical_bit"]))
+        duration_estimates_dt[key] = _duration_dt_or_raise(
             tqc,
             label=spec["label"],
             backend=backend,
         )
+        data_phys = [int(physical_path[0]), int(physical_path[2]), int(physical_path[4])]
+        encoded_intervals[key] = {
+            int(pq): _scheduled_memory_interval_dt(tqc, int(pq), int(spec["logical_bit"]), durations)
+            for pq in data_phys
+        }
 
     for spec in selected:
         if spec["kind"] != "unencoded":
             continue
         key = (int(spec["rounds"]), int(spec["logical_bit"]))
-        if key not in duration_estimates_dt:
-            raise RuntimeError(f"Missing encoded reference duration for control condition {key}")
-        target_duration_dt = int(duration_estimates_dt[key])
+        if key not in encoded_intervals:
+            raise RuntimeError(f"Missing encoded reference interval for control condition {key}")
         control_data_index = int(spec.get("control_data_index", 0))
-        layout = [_control_physical_qubit(physical_path, control_data_index)]
-        matched_circuit, matched_tqc, matched_total_delay_dt, matched_duration_dt = _match_unencoded_duration(
+        control_pq = _control_physical_qubit(physical_path, control_data_index)
+        if control_pq not in encoded_intervals[key]:
+            raise RuntimeError(f"No encoded interval available for physical qubit {control_pq}")
+        target_interval = int(encoded_intervals[key][control_pq])
+        matched_circuit, matched_tqc, matched_total_delay_dt, matched_interval_dt, matched_total_dt = _match_control_memory_interval(
             backend=backend,
             rounds=int(spec["rounds"]),
             logical_bit=int(spec["logical_bit"]),
             delay_dt_hint=int(spec["delay_dt"]),
-            target_duration_dt=target_duration_dt,
+            target_interval_dt=target_interval,
+            physical_qubit=control_pq,
             seed_transpiler=seed_transpiler,
-            initial_layout=layout,
+            durations=durations,
         )
         spec["total_delay_dt"] = int(matched_total_delay_dt)
         spec["circuit"] = matched_circuit
         spec["_pretranspiled"] = matched_tqc
-        spec["transpiled_duration_dt"] = int(matched_duration_dt)
+        spec["transpiled_duration_dt"] = int(matched_total_dt)
+        spec["memory_interval_dt"] = int(matched_interval_dt)
+        spec["reference_interval_dt"] = int(target_interval)
+        spec["control_physical_qubit"] = int(control_pq)
 
     transpiled = []
-    for spec in selected:
+    for idx, spec in enumerate(selected):
         if spec["kind"] == "encoded":
             layout = _encoded_initial_layout(physical_path)
         else:
@@ -770,6 +818,19 @@ def run_ibm_hardware_syndrome_validation(
         if tqc is None:
             tqc = _transpile_for_hardware(spec["circuit"], backend, seed_transpiler=seed_transpiler, initial_layout=layout)
         spec["transpiled_duration_dt"] = _duration_dt_or_raise(tqc, label=spec["label"], backend=backend)
+        circuit_id = f"{idx:02d}:{spec['label']}"
+        spec["circuit_id"] = circuit_id
+        expected_measured = _expected_measured_physical_qubits(spec, physical_path)
+        spec["expected_measured_physical_qubits"] = expected_measured
+        tqc.metadata = {
+            "circuit_id": circuit_id,
+            "kind": spec["kind"],
+            "rounds": int(spec["rounds"]),
+            "logical_bit": int(spec["logical_bit"]),
+            "control_data_index": spec.get("control_data_index"),
+            "expected_measured_physical_qubits": expected_measured,
+            "expected_num_clbits": int(tqc.num_clbits),
+        }
         transpiled.append(tqc)
 
     transpile_rows = []
@@ -815,6 +876,32 @@ def run_ibm_hardware_syndrome_validation(
         counts = _extract_counts_from_sampler_pub(sampler_result[idx], register_name="m")
         _assert_counts_sum(counts, shots, spec["label"])
         counts_list.append(counts)
+
+    pub_association = []
+    association_ok = True
+    for idx, spec in enumerate(selected):
+        returned_meta = per_pub_metadata[idx] if idx < len(per_pub_metadata) else {}
+        cm = returned_meta.get("circuit_metadata") if isinstance(returned_meta, dict) else None
+        returned_id = cm.get("circuit_id") if isinstance(cm, dict) else None
+        expected_id = spec.get("circuit_id")
+        measured = _measured_physical_qubits_from_circuit(transpiled[idx])
+        expected_measured = spec.get("expected_measured_physical_qubits")
+        id_match = None if returned_id is None else (returned_id == expected_id)
+        measured_match = measured == expected_measured
+        if measured_match is False or id_match is False:
+            association_ok = False
+        pub_association.append(
+            {
+                "index": idx,
+                "label": spec["label"],
+                "expected_circuit_id": expected_id,
+                "returned_circuit_id": returned_id,
+                "circuit_id_match": id_match,
+                "measured_physical_qubits": measured,
+                "expected_measured_physical_qubits": expected_measured,
+                "measured_qubits_match": measured_match,
+            }
+        )
 
     rows = []
     for idx, spec in enumerate(selected):
@@ -967,12 +1054,29 @@ def run_ibm_hardware_syndrome_validation(
             "actual_duration_dt": duration_dt,
             "duration_match_delta_dt": int(duration_dt - encoded_ref_dt),
             "dt_seconds": dt_seconds,
-            "reference_encoded_duration_seconds": (encoded_ref_dt * dt_seconds) if dt_seconds else None,
-            "actual_duration_seconds": (duration_dt * dt_seconds) if dt_seconds else None,
-            "duration_match_delta_seconds": ((duration_dt - encoded_ref_dt) * dt_seconds) if dt_seconds else None,
         }
+        if spec["kind"] == "encoded":
+            row["memory_interval_dt_by_physical_qubit"] = {
+                str(k): int(v) for k, v in encoded_intervals.get(key, {}).items()
+            }
+        else:
+            mi = int(spec.get("memory_interval_dt"))
+            ref = int(spec.get("reference_interval_dt"))
+            row["control_physical_qubit"] = int(spec.get("control_physical_qubit"))
+            row["memory_interval_dt"] = mi
+            row["reference_encoded_interval_dt"] = ref
+            row["memory_interval_delta_dt"] = int(mi - ref)
+            row["memory_interval_delta_seconds"] = ((mi - ref) * dt_seconds) if dt_seconds else None
         timing_table.append(row)
     (run_dir / "timing_comparison.json").write_text(json.dumps(timing_table, indent=2), encoding="utf-8")
+
+    pub_association_path = run_dir / "pub_association_check.json"
+    pub_association_path.write_text(json.dumps(pub_association, indent=2), encoding="utf-8")
+    if not association_ok:
+        raise RuntimeError(
+            f"PUB association check failed; see {pub_association_path}. "
+            "Measured physical qubits or returned circuit identifiers did not match the submitted circuits."
+        )
 
     meta = {
         "status": "completed",
@@ -994,6 +1098,8 @@ def run_ibm_hardware_syndrome_validation(
         "physical_path_logical_order": list(physical_path),
         "dt_seconds": dt_seconds,
         "timing_comparison_path": str(run_dir / "timing_comparison.json"),
+        "pub_association_check_path": str(pub_association_path),
+        "matching_defined_over": "data_qubit_memory_interval",
         "run_transpile_summary": str(run_transpile_summary),
         "calibration": calibration,
         "decoder_description": "history_based_heuristic_dynamic_programming",
