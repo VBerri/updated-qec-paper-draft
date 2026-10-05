@@ -1,0 +1,26 @@
+{
+  "physical_path_logical_order": [
+    0,
+    1,
+    2,
+    3,
+    16
+  ],
+  "builder_qubit_order": [
+    "data0",
+    "data1",
+    "data2",
+    "anc0",
+    "anc1"
+  ],
+  "flat_register": "m",
+  "syndrome_map_per_round": {
+    "s01_index": "2*r",
+    "s12_index": "2*r+1"
+  },
+  "final_data_indices": {
+    "d0": "2*rounds",
+    "d1": "2*rounds+1",
+    "d2": "2*rounds+2"
+  }
+}

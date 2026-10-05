@@ -1,0 +1,258 @@
+[
+  {
+    "index": 0,
+    "label": "unencoded_r3_log1_dq0_delay0",
+    "expected_circuit_id": "00:unencoded_r3_log1_dq0_delay0",
+    "returned_circuit_id": "00:unencoded_r3_log1_dq0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0
+    ],
+    "expected_measured_physical_qubits": [
+      0
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 1,
+    "label": "unencoded_r3_log0_dq2_delay0",
+    "expected_circuit_id": "01:unencoded_r3_log0_dq2_delay0",
+    "returned_circuit_id": "01:unencoded_r3_log0_dq2_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 2,
+    "label": "encoded_r3_log0_delay0",
+    "expected_circuit_id": "02:encoded_r3_log0_delay0",
+    "returned_circuit_id": "02:encoded_r3_log0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 3,
+    "label": "unencoded_r1_log0_dq0_delay0",
+    "expected_circuit_id": "03:unencoded_r1_log0_dq0_delay0",
+    "returned_circuit_id": "03:unencoded_r1_log0_dq0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0
+    ],
+    "expected_measured_physical_qubits": [
+      0
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 4,
+    "label": "unencoded_r1_log1_dq0_delay0",
+    "expected_circuit_id": "04:unencoded_r1_log1_dq0_delay0",
+    "returned_circuit_id": "04:unencoded_r1_log1_dq0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0
+    ],
+    "expected_measured_physical_qubits": [
+      0
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 5,
+    "label": "unencoded_r1_log1_dq2_delay0",
+    "expected_circuit_id": "05:unencoded_r1_log1_dq2_delay0",
+    "returned_circuit_id": "05:unencoded_r1_log1_dq2_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 6,
+    "label": "encoded_r3_log1_delay0",
+    "expected_circuit_id": "06:encoded_r3_log1_delay0",
+    "returned_circuit_id": "06:encoded_r3_log1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 7,
+    "label": "unencoded_r3_log0_dq0_delay0",
+    "expected_circuit_id": "07:unencoded_r3_log0_dq0_delay0",
+    "returned_circuit_id": "07:unencoded_r3_log0_dq0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0
+    ],
+    "expected_measured_physical_qubits": [
+      0
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 8,
+    "label": "unencoded_r3_log1_dq2_delay0",
+    "expected_circuit_id": "08:unencoded_r3_log1_dq2_delay0",
+    "returned_circuit_id": "08:unencoded_r3_log1_dq2_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 9,
+    "label": "unencoded_r3_log1_dq1_delay0",
+    "expected_circuit_id": "09:unencoded_r3_log1_dq1_delay0",
+    "returned_circuit_id": "09:unencoded_r3_log1_dq1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      2
+    ],
+    "expected_measured_physical_qubits": [
+      2
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 10,
+    "label": "encoded_r1_log0_delay0",
+    "expected_circuit_id": "10:encoded_r1_log0_delay0",
+    "returned_circuit_id": "10:encoded_r1_log0_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 11,
+    "label": "encoded_r1_log1_delay0",
+    "expected_circuit_id": "11:encoded_r1_log1_delay0",
+    "returned_circuit_id": "11:encoded_r1_log1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      0,
+      1,
+      2,
+      3,
+      16
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 12,
+    "label": "unencoded_r1_log1_dq1_delay0",
+    "expected_circuit_id": "12:unencoded_r1_log1_dq1_delay0",
+    "returned_circuit_id": "12:unencoded_r1_log1_dq1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      2
+    ],
+    "expected_measured_physical_qubits": [
+      2
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 13,
+    "label": "unencoded_r1_log0_dq1_delay0",
+    "expected_circuit_id": "13:unencoded_r1_log0_dq1_delay0",
+    "returned_circuit_id": "13:unencoded_r1_log0_dq1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      2
+    ],
+    "expected_measured_physical_qubits": [
+      2
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 14,
+    "label": "unencoded_r3_log0_dq1_delay0",
+    "expected_circuit_id": "14:unencoded_r3_log0_dq1_delay0",
+    "returned_circuit_id": "14:unencoded_r3_log0_dq1_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      2
+    ],
+    "expected_measured_physical_qubits": [
+      2
+    ],
+    "measured_qubits_match": true
+  },
+  {
+    "index": 15,
+    "label": "unencoded_r1_log0_dq2_delay0",
+    "expected_circuit_id": "15:unencoded_r1_log0_dq2_delay0",
+    "returned_circuit_id": "15:unencoded_r1_log0_dq2_delay0",
+    "circuit_id_match": true,
+    "measured_physical_qubits": [
+      16
+    ],
+    "expected_measured_physical_qubits": [
+      16
+    ],
+    "measured_qubits_match": true
+  }
+]

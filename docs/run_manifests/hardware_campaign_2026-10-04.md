@@ -12,8 +12,8 @@ This manifest tracks the assignment-driven hardware work with:
 - unencoded controls on all three data qubits
 
 Timing-matching status:
-- The committed `...200757Z / ...200817Z / ...200831Z` runs matched **total scheduled circuit duration** between encoded and control circuits. They did **not** equalize the per-data-qubit preparation-to-final-measurement interval (memory exposure). In those runs the single-qubit control places all of its wait before one measurement, whereas the encoded data qubit is measured before the final ancilla operations, so the control was exposed longer (up to roughly 473 dt, about 1.9 us at dt = 4 ns). These runs must not be used to claim a fair memory-lifetime advantage.
-- The runner now matches the **data-qubit memory interval** (`matching_defined_over = "data_qubit_memory_interval"` in `runtime_metadata.json`). New runs record per-qubit interval deltas in `timing_comparison.json`. Interval-matched hardware data has not yet been acquired.
+- The **completed main campaign** (`...002755Z` through `...003102Z`, 9 runs) matches the **per-data-qubit preparation-to-final-measurement interval** (memory exposure). Every control reports `memory_interval_delta_dt = 0` in `timing_comparison.json`, and `runtime_metadata.json` records `matching_defined_over = "data_qubit_memory_interval"`. This is a fair memory-exposure-matched comparison, verified on hardware.
+- The earlier `...200757Z / ...200817Z / ...200831Z` runs are a 128-shot pilot that matched only **total scheduled circuit duration** (unequal per-qubit memory exposure, up to ~473 dt / ~1.9 us). They are retained as archival pilot evidence and are not used for the memory-lifetime comparison.
 
 ## Frozen Configuration
 
@@ -21,28 +21,27 @@ Timing-matching status:
 - Physical path order: `data0, anc0, data1, anc1, data2 = [0,1,2,3,16]`
 - Transpiler seed: `7`
 - Optimization level: `1`
-- Planned main design (not yet acquired): `2000` shots/circuit, delays `0, 128, 384` dt, `3` blocks
-- Acquired pilot: `128` shots/circuit, delays `0, 128, 384` dt, one run per delay
+- Acquired main campaign (interval-matched): `2000` shots/circuit, delays `0, 128, 384` dt, `3` blocks (9 runs, 6000 encoded shots per condition)
+- Earlier pilot (archival): `128` shots/circuit, delays `0, 128, 384` dt, one run per delay
 
 ## Commands
 
 ```powershell
 python scripts/run_ibm_hardware_pilot.py --backend ibm_fez --shots 256 --delay-dt 0 --physical-path 0,1,2,3,16 --seed-transpiler 7
 python scripts/run_ibm_hardware_main_blocks.py --backend ibm_fez --shots 2000 --delays-dt 0,128,384 --blocks 3 --physical-path 0,1,2,3,16 --seed-transpiler 7 --shuffle-circuit-order
-python scripts/analyze_ibm_hardware_campaign.py --run-list results/ibm_hardware_main_campaign_run_list.txt --min-shots 100
+python scripts/analyze_ibm_hardware_campaign.py --run-list results/ibm_hardware_main_campaign_run_list.txt --min-shots 1000
 python scripts/run_ibm_hardware_fault_diagnostic.py --backend ibm_fez --shots 256 --rounds 3 --delay-dt 0 --physical-path 0,1,2,3,16
 ```
 
 ## Execution Status
 
 - Early placeholder/pilot jobs and the pre-fix main attempt produced run directories from `20261004T181808Z` onward; these are retained as archival evidence only.
-- Acquired corrected pilot (128 shots/circuit, one run per delay, total-duration-matched controls):
-	- `results/ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T200757Z` (delay 0)
-	- `results/ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T200817Z` (delay 128)
-	- `results/ibm_hardware_syndrome_validation_results_syndrome_validation_20261004T200831Z` (delay 384)
-- This is a pilot, not the planned 3-block, 2000-shot main campaign. The planned campaign is deferred until interval-matched controls are acquired.
+- **Completed interval-matched main campaign** (2000 shots/circuit, 3 blocks x delays 0/128/384, interleaved circuit order): 9 run directories from `20261005T002755Z` through `20261005T003102Z`, listed in `results/ibm_hardware_main_campaign_run_list.txt`.
+- Across all 9 runs: every control reports `memory_interval_delta_dt = 0`, every `pub_association_check.json` reports matching measured qubits, and every returned `circuit_id` matches the submitted circuit.
+- Aggregated to 6000 encoded shots per (rounds, logical_bit, delay) condition in `results/ibm_hardware_campaign_summary.csv`.
+- Earlier 128-shot pilot (`...200757Z / ...200817Z / ...200831Z`, total-duration-matched) retained as archival pilot evidence.
 - Fault-diagnostic run completed (12 encoded diagnostic circuits): `job_id=db1b29uegvvc73bhdfeg`.
-- Circuit-to-label association for all committed runs verified offline from QPY artifacts: `results/ibm_hardware_association_report.json` (`all_ok = true`).
+- Circuit-to-label association for all campaign runs verified offline from QPY artifacts: `results/ibm_hardware_association_report.json` (`all_ok = true`).
 
 Reproduce the association check:
 
@@ -77,12 +76,11 @@ Global outputs:
 - `results/ibm_hardware_fault_diagnostic_results_syndrome_validation_20261004T200358Z/ibm_hardware_fault_diagnostic_results.csv`
 
 Timing check:
-- In the committed pilot run directories, `timing_comparison.json` reports `duration_match_delta_dt = 0` (total scheduled circuit duration matched).
-- These pilot runs predate memory-interval matching, so per-qubit `memory_interval_delta_dt` is not reported for them. New runs report it and target `0`.
+- In the 9 main-campaign run directories, every control row in `timing_comparison.json` reports `memory_interval_delta_dt = 0` (per-data-qubit memory exposure matched exactly).
+- The archival 128-shot pilot runs report only `duration_match_delta_dt = 0` (total scheduled duration) and predate memory-interval matching.
 
 ## Notes
 
 - Claims are restricted to computational-basis memory behavior with offline decoding.
 - The history decoder is a history-based heuristic dynamic-programming decoder, not a full detector-graph MWPM implementation on hardware counts.
-- The committed hardware data is a 128-shot pilot. Fair memory-lifetime comparison requires the interval-matched acquisition that is implemented but not yet run.
-- This is not a threshold claim and not real-time correction.
+- The main campaign uses interval-matched controls, so encoded-vs-control comparisons reflect equal per-qubit memory exposure. It remains a fixed-layout, single-backend study, not a threshold claim and not real-time correction.
