@@ -1100,6 +1100,8 @@ def run_ibm_hardware_syndrome_validation(
         "timing_comparison_path": str(run_dir / "timing_comparison.json"),
         "pub_association_check_path": str(pub_association_path),
         "matching_defined_over": "data_qubit_memory_interval",
+        # Interval match is computed from local transpiler op_start_times, not the returned device pulse trace.
+        "interval_match_basis": "transpiler_schedule_op_start_times",
         "run_transpile_summary": str(run_transpile_summary),
         "calibration": calibration,
         "decoder_description": "history_based_heuristic_dynamic_programming",

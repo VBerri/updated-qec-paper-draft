@@ -1,0 +1,1257 @@
+{
+  "summary": {
+    "num_runs": 9,
+    "num_control_encoded_pairs": 61,
+    "device_interval_delta_dt_max_abs": 1763,
+    "device_interval_delta_dt_mean_abs": 31.721311475409838,
+    "device_interval_delta_ns_max_abs": 7052.0,
+    "device_interval_delta_ns_mean_abs": 126.88524590163937,
+    "total_pubs": 144,
+    "total_signature_mismatches": 34
+  },
+  "reports": [
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002755Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 2,
+      "signature_mismatches": [
+        {
+          "label": "unencoded_r1_log1_dq0_delay0",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            0
+          ]
+        },
+        {
+          "label": "unencoded_r1_log0_dq1_delay0",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [
+            0
+          ],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1827,
+          "control_interval_dt": 1822,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1787,
+          "control_interval_dt": 1782,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1838,
+          "control_interval_dt": 1833,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 25,
+          "control_interval_dt": 24,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 76,
+          "control_interval_dt": 75,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 53,
+          "control_interval_dt": 52,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1844,
+          "control_interval_dt": 1839,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 70,
+          "control_interval_dt": 69,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1821,
+          "control_interval_dt": 1816,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1793,
+          "control_interval_dt": 1788,
+          "delta_dt": 5
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002818Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 4,
+      "signature_mismatches": [
+        {
+          "label": "unencoded_r1_log0_dq2_delay128",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [
+            2
+          ],
+          "expected_prepared": []
+        },
+        {
+          "label": "encoded_r1_log0_delay128",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r1_log1_dq1_delay128",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [
+            16
+          ],
+          "expected_prepared": [
+            2
+          ]
+        },
+        {
+          "label": "unencoded_r3_log1_dq2_delay128",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            16
+          ]
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 147,
+          "control_interval_dt": 146,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 198,
+          "control_interval_dt": 197,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1915,
+          "control_interval_dt": 1910,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1949,
+          "control_interval_dt": 1944,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1915,
+          "control_interval_dt": 1910,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 128,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1949,
+          "control_interval_dt": 1944,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1966,
+          "control_interval_dt": 1961,
+          "delta_dt": 5
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002843Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 6,
+      "signature_mismatches": [
+        {
+          "label": "unencoded_r1_log1_dq0_delay384",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            0
+          ]
+        },
+        {
+          "label": "encoded_r3_log0_delay384",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            0
+          ],
+          "expected_prepared": []
+        },
+        {
+          "label": "encoded_r1_log1_delay384",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            2
+          ],
+          "expected_prepared": [
+            0,
+            2,
+            16
+          ]
+        },
+        {
+          "label": "unencoded_r3_log1_dq1_delay384",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [
+            0,
+            2,
+            16
+          ],
+          "expected_prepared": [
+            2
+          ]
+        },
+        {
+          "label": "unencoded_r3_log1_dq0_delay384",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [
+            0,
+            2,
+            16
+          ],
+          "expected_prepared": [
+            0
+          ]
+        },
+        {
+          "label": "encoded_r3_log1_delay384",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            0
+          ],
+          "expected_prepared": [
+            0,
+            2,
+            16
+          ]
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 403,
+          "control_interval_dt": 402,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 437,
+          "control_interval_dt": 436,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 454,
+          "control_interval_dt": 453,
+          "delta_dt": 1
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002906Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 4,
+      "signature_mismatches": [
+        {
+          "label": "encoded_r1_log0_delay0",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            16
+          ],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r3_log1_dq2_delay0",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            16
+          ]
+        },
+        {
+          "label": "unencoded_r1_log0_dq0_delay0",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "encoded_r3_log0_delay0",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 53,
+          "control_interval_dt": 52,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 19,
+          "control_interval_dt": 18,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1821,
+          "control_interval_dt": 1816,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1787,
+          "control_interval_dt": 1782,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 70,
+          "control_interval_dt": 69,
+          "delta_dt": 1
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002928Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 5,
+      "signature_mismatches": [
+        {
+          "label": "encoded_r1_log0_delay128",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r1_log0_dq0_delay128",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "encoded_r3_log0_delay128",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            16
+          ],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r1_log1_dq2_delay128",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [
+            2
+          ],
+          "expected_prepared": [
+            16
+          ]
+        },
+        {
+          "label": "unencoded_r1_log1_dq1_delay128",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            2
+          ]
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 147,
+          "control_interval_dt": 146,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1949,
+          "control_interval_dt": 1944,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1966,
+          "control_interval_dt": 1961,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1915,
+          "control_interval_dt": 1910,
+          "delta_dt": 5
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T002952Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 2,
+      "signature_mismatches": [
+        {
+          "label": "unencoded_r1_log1_dq2_delay384",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            16
+          ]
+        },
+        {
+          "label": "encoded_r3_log0_delay384",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            16
+          ],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 403,
+          "control_interval_dt": 402,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 2222,
+          "control_interval_dt": 2217,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 437,
+          "control_interval_dt": 436,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 454,
+          "control_interval_dt": 453,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 437,
+          "control_interval_dt": 436,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 2171,
+          "control_interval_dt": 2166,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 403,
+          "control_interval_dt": 402,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 2205,
+          "control_interval_dt": 2200,
+          "delta_dt": 5
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T003015Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 5,
+      "signature_mismatches": [
+        {
+          "label": "encoded_r3_log1_delay0",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [
+            16
+          ],
+          "expected_prepared": [
+            0,
+            2,
+            16
+          ]
+        },
+        {
+          "label": "unencoded_r3_log0_dq0_delay0",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [
+            0,
+            2,
+            16
+          ],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r3_log1_dq2_delay0",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            16
+          ]
+        },
+        {
+          "label": "unencoded_r3_log0_dq1_delay0",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r1_log0_dq2_delay0",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1844,
+          "control_interval_dt": 1839,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 25,
+          "control_interval_dt": 24,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 19,
+          "control_interval_dt": 18,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 70,
+          "control_interval_dt": 69,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 53,
+          "control_interval_dt": 52,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 0,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 59,
+          "control_interval_dt": 58,
+          "delta_dt": 1
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T003037Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 4,
+      "signature_mismatches": [
+        {
+          "label": "encoded_r3_log0_delay128",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r3_log0_dq1_delay128",
+          "observed_measured": [
+            0,
+            1,
+            2,
+            3,
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r1_log0_dq1_delay128",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            2
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        },
+        {
+          "label": "unencoded_r3_log0_dq2_delay128",
+          "observed_measured": [
+            2
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 1915,
+          "control_interval_dt": 1910,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 147,
+          "control_interval_dt": 146,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 128,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 147,
+          "control_interval_dt": 146,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 198,
+          "control_interval_dt": 197,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 1949,
+          "control_interval_dt": 1944,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 1966,
+          "control_interval_dt": 1961,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 128,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 181,
+          "control_interval_dt": 180,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 128,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 198,
+          "control_interval_dt": 1961,
+          "delta_dt": -1763
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    },
+    {
+      "run_dir": "C:\\Me\\qec_repetition_research\\results\\ibm_hardware_syndrome_validation_results_syndrome_validation_20261005T003102Z",
+      "dt_seconds": 4e-09,
+      "num_pubs": 16,
+      "num_signature_mismatches": 2,
+      "signature_mismatches": [
+        {
+          "label": "unencoded_r1_log1_dq0_delay384",
+          "observed_measured": [
+            16
+          ],
+          "expected_measured": [
+            0
+          ],
+          "observed_prepared": [],
+          "expected_prepared": [
+            0
+          ]
+        },
+        {
+          "label": "unencoded_r3_log0_dq2_delay384",
+          "observed_measured": [
+            0
+          ],
+          "expected_measured": [
+            16
+          ],
+          "observed_prepared": [
+            0
+          ],
+          "expected_prepared": []
+        }
+      ],
+      "device_interval_deltas": [
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 437,
+          "control_interval_dt": 436,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 2205,
+          "control_interval_dt": 2200,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 2171,
+          "control_interval_dt": 2166,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 454,
+          "control_interval_dt": 453,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 2205,
+          "control_interval_dt": 2200,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 454,
+          "control_interval_dt": 453,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 1,
+          "physical_qubit": 2,
+          "encoded_interval_dt": 437,
+          "control_interval_dt": 436,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 1,
+          "delay_dt": 384,
+          "control_data_index": 2,
+          "physical_qubit": 16,
+          "encoded_interval_dt": 2222,
+          "control_interval_dt": 2217,
+          "delta_dt": 5
+        },
+        {
+          "rounds": 1,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 403,
+          "control_interval_dt": 402,
+          "delta_dt": 1
+        },
+        {
+          "rounds": 3,
+          "logical_bit": 0,
+          "delay_dt": 384,
+          "control_data_index": 0,
+          "physical_qubit": 0,
+          "encoded_interval_dt": 2171,
+          "control_interval_dt": 2166,
+          "delta_dt": 5
+        }
+      ],
+      "note": "device_interval_deltas computed only from signature-consistent returned traces"
+    }
+  ]
+}
