@@ -157,7 +157,6 @@ def run_decoder_comparison(
     out_csv: str | Path = "results/decoder_comparison_results.csv",
 ) -> pd.DataFrame:
     rows = []
-    pairwise_rows = []
 
     for d in distances:
         rounds = d
@@ -167,13 +166,13 @@ def run_decoder_comparison(
             method_rows, pairwise = evaluate_decoders_on_shared_samples(
                 sampling_circuit=circuit,
                 decoder_circuits={
-                    "unweighted_mwpm": circuit,
                     "mwpm": circuit,
+                    "weighted_calibration_informed_mwpm": circuit,
                 },
                 shots=shots,
                 seed=seed,
                 include_final_data_majority=True,
-                include_detector_count_heuristic=True,
+                include_detector_count_heuristic=False,
                 prepared_logical_bit=0,
             )
 
@@ -186,20 +185,6 @@ def run_decoder_comparison(
                         "rounds": rounds,
                         "p": p,
                         **m,
-                    }
-                )
-
-            for pw in pairwise:
-                pairwise_rows.append(
-                    {
-                        "layer": "layer2",
-                        "experiment": "decoder_comparison_pairwise",
-                        "distance": d,
-                        "rounds": rounds,
-                        "p": p,
-                        "shots": shots,
-                        "seed": seed,
-                        **pw,
                     }
                 )
 
@@ -227,7 +212,7 @@ def run_decoder_comparison(
                         "distance": d,
                         "rounds": rounds,
                         "p": p,
-                        "method": "toy_film_neural",
+                        "method": "toy_film_style_neural",
                         "shots": subsample,
                         "failures": int(np.sum(neural_pred != actual[:subsample])),
                         "logical_error_rate": neural_error,
@@ -238,9 +223,4 @@ def run_decoder_comparison(
     out_path = Path(out_csv)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_path, index=False)
-
-    pairwise_df = pd.DataFrame(pairwise_rows)
-    if not pairwise_df.empty:
-        pairwise_out = out_path.with_name(f"{out_path.stem}_pairwise{out_path.suffix}")
-        pairwise_df.to_csv(pairwise_out, index=False)
     return df

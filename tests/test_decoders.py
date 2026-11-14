@@ -16,7 +16,7 @@ def test_decoder_comparison_outputs(tmp_path: Path):
     )
     assert out_csv.exists()
     methods = set(df["method"].tolist())
-    assert methods == {"final_data_majority", "detector_count_heuristic", "unweighted_mwpm", "mwpm"}
+    assert methods == {"final_data_majority", "mwpm", "weighted_calibration_informed_mwpm"}
 
     assert "failures" in df.columns
     assert int(df["failures"].min()) >= 0
@@ -24,7 +24,7 @@ def test_decoder_comparison_outputs(tmp_path: Path):
 
     pivot = df.pivot_table(index=["distance", "p"], columns="method", values="logical_error_rate")
     row = pivot.loc[(5, 0.05)]
-    assert row["mwpm"] <= row["unweighted_mwpm"]
+    assert row["mwpm"] <= row["final_data_majority"]
 
 
 def test_final_data_majority_returns_decoded_bit_not_failure_mask():

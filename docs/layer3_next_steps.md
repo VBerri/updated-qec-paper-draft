@@ -1,17 +1,11 @@
 # Layer 3 Next Steps
 
-Completed:
-1. Finished Layer 1 and Layer 2.
-2. Added real Layer 3 IBM execution path.
-3. Ran one constrained hardware job (`n=3`, 3 circuits, 1000 shots).
+1. Finish Layer 1 and Layer 2 first.
+2. Then set IBM credentials in PowerShell.
+3. Then run scripts/run_ibm_hardware_validation.py.
+4. IBM validation should use n = 3 only, at most 3 circuits, 1000 shots, one job.
 
-Next practical steps:
-1. Repeat the same Layer 3 run at least once at a different time window to check stability.
-2. Optionally run one additional backend if available to measure backend-to-backend variance.
-3. Add a short final comparison paragraph in the paper text using `results/ibm_hardware_validation_results.csv` and `results/ibm_hardware_job_metadata.json`.
-4. Rotate IBM API credentials after validation runs if secrets were ever exposed.
-
-Example PowerShell setup:
+Windows PowerShell setup:
 
 ```powershell
 $env:IBM_QUANTUM_TOKEN="your_api_key_here"
