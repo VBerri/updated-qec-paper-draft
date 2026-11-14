@@ -10,7 +10,12 @@ We added Stim circuit-level simulations, biased Pauli noise, measurement noise, 
 Try something more interesting on the decoder side.
 
 ## Response
-We compared majority vote with MWPM/PyMatching, weighted calibration-informed MWPM, and an optional toy FiLM-style neural decoder.
+We compared `final_data_majority`, `unweighted_mwpm`, and detector-model weighted `mwpm` (PyMatching from Stim DEM), with `detector_count_heuristic` as a control baseline and an optional toy FiLM-style neural decoder.
 
 ## IBM validation
-Not run yet. Reserved for Layer 3 after local results are complete.
+Completed on `ibm_fez` with raw evidence preserved.
+
+Manifest and evidence links:
+- [docs/run_manifests/hardware_campaign_2026-10-04.md](docs/run_manifests/hardware_campaign_2026-10-04.md)
+- [results/ibm_hardware_main_campaign_run_list.txt](results/ibm_hardware_main_campaign_run_list.txt)
+- [results/ibm_hardware_scheduler_timing_report.json](results/ibm_hardware_scheduler_timing_report.json)
