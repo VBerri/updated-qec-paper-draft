@@ -57,12 +57,13 @@ def test_heterogeneous_noise_same_mean_outputs(tmp_path: Path):
     )
 
     assert out_csv.exists()
-    assert set(df["spread"]) == {0.0, 0.25, 0.5, 1.0}
-    assert {"final_data_majority", "mwpm"}.issubset(set(df["method"]))
+    assert set(df["scenario"]) == {"uniform_control", "local_defect_edge", "local_defect_center"}
+    assert {"final_data_majority", "unweighted_mwpm", "mwpm_nominal_uniform_model", "mwpm_oracle_heterogeneous_model"}.issubset(set(df["method"]))
 
-    # With spread=0, rates remain exactly homogeneous.
-    spread0 = df[df["spread"] == 0.0]
-    assert float(spread0["effective_p_std"].max()) == 0.0
+    # Same-mean design should preserve mean data rate for each scenario.
+    means = df.groupby("scenario")["effective_p_mean"].mean().to_dict()
+    assert abs(means["uniform_control"] - means["local_defect_edge"]) < 1e-12
+    assert abs(means["uniform_control"] - means["local_defect_center"]) < 1e-12
 
 
 def test_temporal_drift_schedule_outputs(tmp_path: Path):
@@ -77,11 +78,16 @@ def test_temporal_drift_schedule_outputs(tmp_path: Path):
 
     assert out_csv.exists()
     assert set(df["snapshot"]) == {
-        "snapshot_0",
-        "snapshot_1",
-        "snapshot_2",
-        "snapshot_3",
-        "snapshot_4",
+        "constant_data_schedule",
+        "front_half_low_back_half_high",
+        "measurement_only_worse",
     }
-    assert {"final_data_majority", "mwpm", "weighted_calibration_informed_mwpm"}.issubset(set(df["method"]))
-    assert (df["schedule_data_std"] >= 0).all()
+    assert {"final_data_majority", "unweighted_mwpm", "mwpm_nominal_static_model", "mwpm_oracle_true_schedule_model"}.issubset(set(df["method"]))
+
+    # Constant and drift schedule share the same mean data rate.
+    pivot = (
+        df.groupby("snapshot", as_index=False)["schedule_data_mean"]
+        .mean()
+        .set_index("snapshot")["schedule_data_mean"]
+    )
+    assert abs(float(pivot["constant_data_schedule"]) - float(pivot["front_half_low_back_half_high"])) < 1e-12

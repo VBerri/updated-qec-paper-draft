@@ -1,0 +1,4 @@
+source_commit: 12d9263
+current_branch: repair/restore-0068a13-behavior
+current_head: 12d9263a240057a0fb293378b834a7ce1b0e5c09
+command_used: Copy regression result CSVs into timestamped provenance folder and record commit/branch/head

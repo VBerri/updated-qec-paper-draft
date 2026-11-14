@@ -1,0 +1,96 @@
+# Syndrome-Schedule Implementation Plan (Separate Extension)
+
+## Purpose
+
+This document proposes a separate experiment to compare syndrome rounds 0, 1, 3, and 5 at fixed per-data-qubit scheduled memory intervals.
+
+This plan is additive. It does not replace existing Layer 1, Layer 2, or Layer 3 experiments.
+
+## Scope and Guardrails
+
+- Compare only round-count variants: 0, 1, 3, 5.
+- Keep per-data-qubit scheduled memory interval fixed across variants.
+- Use time-dependent idle-noise models in simulation.
+- Split calibration and evaluation data into separate datasets.
+- Do not submit hardware jobs as part of this extension.
+- Do not claim novelty or improved performance in plan text or outputs.
+
+## Primary Question
+
+At equal scheduled memory exposure per data qubit, how does changing syndrome round count (0, 1, 3, 5) affect logical error under time-dependent idle noise?
+
+## Experimental Design
+
+### 1) Schedule-Normalized Circuits
+
+- Build four encoded circuit families with rounds in {0, 1, 3, 5}.
+- For each family, tune delay placement so each data qubit has the same scheduled prep-to-final-measurement interval.
+- Record schedule audit metadata per circuit:
+  - target interval
+  - achieved interval
+  - residual delta
+  - per-qubit interval vector
+
+### 2) Time-Dependent Idle Noise
+
+- Define nonstationary idle-noise profiles over the memory window (for example: low->high drift, high->low recovery, piecewise pulse).
+- Apply the same profile class across all round-count variants, with normalization to preserve comparable integrated exposure.
+- Keep non-idle channels fixed unless explicitly part of sensitivity checks.
+
+### 3) Calibration/Evaluation Split
+
+- Calibration dataset:
+  - Used to fit or select decoder weights/parameters.
+  - No final metric reporting from this split.
+- Evaluation dataset:
+  - Held out and never used for decoder tuning.
+  - Used for all reported round-comparison metrics.
+- Store split manifests and seeds for reproducibility.
+
+### 4) Decoders
+
+Evaluate at least:
+- final_data_majority
+- unweighted_mwpm
+- mwpm (detector-model weighted)
+
+Optional additional decoders may be included, but must be reported as secondary.
+
+### 5) Outputs
+
+Proposed new artifacts (separate from current baseline files):
+- results/syndrome_schedule_round_comparison.csv
+- results/syndrome_schedule_round_comparison_pairwise.csv
+- results/syndrome_schedule_schedule_audit.csv
+- results/syndrome_schedule_calibration_manifest.json
+- results/syndrome_schedule_evaluation_manifest.json
+- figures/syndrome_schedule_round_comparison.png
+- figures/syndrome_schedule_schedule_residuals.png
+- docs/syndrome_schedule_notes.md
+
+## Analysis and Reporting Rules
+
+- Report logical error rate and confidence intervals on evaluation split only.
+- Include pairwise decoder disagreement summaries on the same shots.
+- Include schedule residual summaries to demonstrate interval matching quality.
+- Explicitly state this is a controlled extension experiment.
+- Do not state or imply improved performance claims unless directly supported by held-out evaluation data.
+
+## Implementation Steps
+
+1. Add schedule-normalization helper for rounds {0,1,3,5}.
+2. Add time-dependent idle-noise profile generator module.
+3. Add calibration/evaluation split manifest writer.
+4. Add experiment runner script (local simulation only).
+5. Add plotting and audit-summary utilities.
+6. Add tests for:
+   - interval matching tolerance checks
+   - split isolation (no overlap)
+   - stable artifact schema
+7. Document assumptions and limitations in syndrome_schedule_notes.
+
+## Non-Goals
+
+- No replacement of current decoder comparison or drift experiments.
+- No IBM hardware submission.
+- No claims of state-of-the-art performance.

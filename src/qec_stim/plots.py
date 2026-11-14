@@ -74,22 +74,23 @@ def plot_heterogeneous_noise(
 ) -> None:
     df = pd.read_csv(csv_path)
     if "method" in df.columns:
-        df = df[df["method"] == "mwpm"]
+        df = df[df["method"] == "mwpm_oracle_heterogeneous_model"]
 
     agg = (
-        df.groupby(["spread", "distance"], as_index=False)["logical_error_rate"]
+        df.groupby(["scenario", "distance"], as_index=False)["logical_error_rate"]
         .mean()
-        .sort_values(["distance", "spread"])
+        .sort_values(["distance", "scenario"])
     )
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for d in sorted(agg["distance"].unique()):
         sub = agg[agg["distance"] == d]
-        ax.plot(sub["spread"], sub["logical_error_rate"], marker="o", label=f"d={d}")
-    ax.set_xlabel("Lognormal spread")
+        ax.plot(sub["scenario"], sub["logical_error_rate"], marker="o", label=f"d={d}")
+    ax.set_xlabel("Scenario")
     ax.set_ylabel("Mean logical error rate")
-    ax.set_title("Heterogeneous Noise Impact")
+    ax.set_title("Heterogeneous Noise Impact (Same-Mean Scenarios)")
     ax.grid(True, alpha=0.3)
+    ax.tick_params(axis="x", rotation=20)
     ax.legend()
     fig.tight_layout()
     Path(fig_path).parent.mkdir(parents=True, exist_ok=True)
@@ -103,7 +104,7 @@ def plot_temporal_drift(
 ) -> None:
     df = pd.read_csv(csv_path)
     if "method" in df.columns:
-        df = df[df["method"] == "weighted_calibration_informed_mwpm"]
+        df = df[df["method"] == "mwpm_oracle_true_schedule_model"]
     agg = df.groupby("snapshot", as_index=False)["logical_error_rate"].mean()
 
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -126,17 +127,19 @@ def plot_decoder_comparison(
     df = pd.read_csv(csv_path)
     method_labels = {
         "final_data_majority": "Final-data majority",
+        "detector_count_heuristic": "Detector-count heuristic",
+        "unweighted_mwpm": "Unweighted MWPM",
         "mwpm": "MWPM",
-        "weighted_calibration_informed_mwpm": "Weighted calibration-informed MWPM",
-        "toy_film_style_neural": "Toy FiLM-style neural",
+        "toy_film_neural": "Toy FiLM neural",
     }
     method_order = [
         method
         for method in [
             "final_data_majority",
+            "detector_count_heuristic",
+            "unweighted_mwpm",
             "mwpm",
-            "weighted_calibration_informed_mwpm",
-            "toy_film_style_neural",
+            "toy_film_neural",
         ]
         if method in set(df["method"])
     ]

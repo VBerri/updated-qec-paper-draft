@@ -661,21 +661,68 @@ def run_ibm_hardware_validation(
     out_csv: str | Path = "results/ibm_hardware_validation_results.csv",
     out_job_json: str | Path = "results/ibm_hardware_job_metadata.json",
 ) -> dict:
+    if shots <= 0:
+        raise ValueError("shots must be positive")
+    if max_circuits <= 0:
+        raise ValueError("max_circuits must be positive")
+    if code_size < 3:
+        raise ValueError("code_size must be at least 3")
+
     token, instance = validate_ibm_environment()
-    if not token:
-        raise RuntimeError(
-            "IBM_QUANTUM_TOKEN is required. Layer 3 hardware validation is deferred in this phase."
+    service = _build_service(token=token, instance=instance)
+
+    backend = _pick_backend(service, min_num_qubits=code_size, backend_name=backend_name)
+    candidates = _normalize_circuit_specs(code_size=code_size, circuit_specs=circuit_specs)
+    selected = candidates[:max_circuits]
+
+    circuits = [x["circuit"] for x in selected]
+    transpiled = transpile(circuits, backend=backend, optimization_level=1)
+    try:
+        job = backend.run(transpiled, shots=shots)
+        result = job.result()
+        counts_list = [result.get_counts(idx) for idx in range(len(selected))]
+    except IBMBackendError:
+        sampler = SamplerV2(mode=backend)
+        job = sampler.run(transpiled, shots=shots)
+        sampler_result = job.result()
+        counts_list = [_extract_counts_from_sampler_pub(sampler_result[idx]) for idx in range(len(selected))]
+
+    rows = []
+    for idx, spec in enumerate(selected):
+        counts = counts_list[idx]
+        success = logical_success_from_counts(counts, expected_logical="0")
+        rows.append(
+            {
+                "layer": "layer3",
+                "experiment": "ibm_hardware_validation",
+                "label": spec["label"],
+                "basis": spec["basis"],
+                "code_size": code_size,
+                "idle_steps": spec["idle_steps"],
+                "shots": shots,
+                "backend": _backend_name(backend),
+                "logical_success_probability": success,
+                "logical_error_rate": 1.0 - success,
+            }
         )
 
-    return {
-        "status": "deferred",
-        "message": "Layer 3 placeholder is configured but hardware execution is not performed in this phase.",
+    ensure_project_dirs(Path(out_csv).resolve().parents[1])
+    out_csv = Path(out_csv)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
+
+    meta = {
+        "status": "completed",
+        "backend": _backend_name(backend),
+        "job_id": job.job_id(),
+        "shots": shots,
+        "num_circuits": len(selected),
         "instance_provided": bool(instance),
-        "requested_shots": int(shots),
-        "requested_max_circuits": int(max_circuits),
-        "requested_code_size": int(code_size),
-        "backend_name": backend_name,
     }
+    out_job_json = Path(out_job_json)
+    out_job_json.parent.mkdir(parents=True, exist_ok=True)
+    out_job_json.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return meta
 
 
 def run_ibm_hardware_syndrome_validation(

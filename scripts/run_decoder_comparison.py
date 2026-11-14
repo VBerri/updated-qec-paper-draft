@@ -15,7 +15,7 @@ def mode_params(mode: str):
     if mode == "quick":
         return 5000, [0.001, 0.005, 0.01, 0.02], [3, 5, 7]
     if mode == "full-local":
-        return 100000, [0.001, 0.002, 0.005, 0.01, 0.02, 0.05], [3, 5, 7, 9, 11]
+        return 25000, [0.001, 0.002, 0.005, 0.01, 0.02, 0.05], [3, 5, 7, 9, 11]
     raise ValueError("mode must be quick or full-local")
 
 
