@@ -31,6 +31,7 @@ class FixedDurationSpec:
 class NoiseModel:
     p_data_round: float = 0.0
     p_idle_tick: float = 0.0
+    p_cx: float = 0.0
     p_meas_ancilla: float = 0.0
     p_reset_ancilla: float = 0.0
     p_final_data_meas: float = 0.0
@@ -41,6 +42,13 @@ class InjectedFault:
     stage: str
     qubit: int
     round_index: int | None = None
+
+
+def odd_flip_probability(p_tick: float, ticks: int) -> float:
+    """Probability of net odd flips after `ticks` independent symmetric flip opportunities."""
+    if ticks <= 0 or p_tick <= 0:
+        return 0.0
+    return float((1.0 - (1.0 - 2.0 * p_tick) ** ticks) / 2.0)
 
 
 def _data_and_ancilla_qubits(distance: int) -> tuple[list[int], list[int]]:
@@ -58,41 +66,15 @@ def _append_ticks(circuit: stim.Circuit, num_ticks: int) -> None:
         circuit.append("TICK")
 
 
-def _segment_probability(p_tick: float, ticks: int) -> float:
-    if ticks <= 0 or p_tick <= 0:
-        return 0.0
-    return float(1.0 - (1.0 - p_tick) ** ticks)
-
-
-def plan_fixed_duration_schedule(spec: FixedDurationSpec, cost_model: ScheduleCostModel | None = None) -> dict[str, int | list[int]]:
-    model = cost_model or ScheduleCostModel()
-    rounds = spec.rounds
-
-    if rounds < 0:
-        raise ValueError("rounds must be non-negative")
-    if spec.target_duration_ticks < 0:
-        raise ValueError("target_duration_ticks must be non-negative")
-
-    base_per_data = rounds * (2 * model.cx_ticks + model.ancilla_measure_ticks + model.ancilla_reset_ticks)
-    if spec.target_duration_ticks < base_per_data:
-        raise ValueError(
-            f"Target duration {spec.target_duration_ticks} cannot fit base duration {base_per_data} for rounds={rounds}"
-        )
-
-    extra_idle = spec.target_duration_ticks - base_per_data
-    slots = rounds + 1
-    per_slot = extra_idle // slots
-    rem = extra_idle % slots
-
-    idle_before_round = [per_slot + (1 if i < rem else 0) for i in range(rounds)]
-    idle_tail = per_slot
-
-    return {
-        "base_duration_ticks": base_per_data,
-        "extra_idle_ticks": extra_idle,
-        "idle_before_round": idle_before_round,
-        "idle_tail": idle_tail,
-    }
+def _append_cx_layer(circuit: stim.Circuit, pairs: list[tuple[int, int]], p_cx: float) -> None:
+    if not pairs:
+        return
+    targets: list[int] = []
+    for c, t in pairs:
+        targets.extend([c, t])
+    circuit.append("CX", targets)
+    if p_cx > 0:
+        circuit.append("DEPOLARIZE2", targets, [p_cx])
 
 
 def _apply_injected_faults(
@@ -104,15 +86,143 @@ def _apply_injected_faults(
 ) -> None:
     if faults is None:
         return
-    data_set = set(data_qubits)
+    allowed = set(data_qubits)
     for fault in faults:
         if fault.stage != stage:
             continue
         if fault.round_index != round_index:
             continue
-        if fault.qubit not in data_set:
+        if fault.qubit not in allowed:
             raise ValueError(f"Injected fault qubit {fault.qubit} is not a data qubit")
         circuit.append("X_ERROR", [fault.qubit], [1.0])
+
+
+def plan_fixed_duration_schedule(spec: FixedDurationSpec, cost_model: ScheduleCostModel | None = None) -> dict[str, int | list[int]]:
+    model = cost_model or ScheduleCostModel()
+
+    if spec.rounds < 0:
+        raise ValueError("rounds must be non-negative")
+    if spec.target_duration_ticks < 0:
+        raise ValueError("target_duration_ticks must be non-negative")
+
+    base_per_data = spec.rounds * (2 * model.cx_ticks + model.ancilla_measure_ticks + model.ancilla_reset_ticks)
+    if spec.target_duration_ticks < base_per_data:
+        raise ValueError(
+            f"Target duration {spec.target_duration_ticks} cannot fit base duration {base_per_data} for rounds={spec.rounds}"
+        )
+
+    extra_idle = spec.target_duration_ticks - base_per_data
+    slots = spec.rounds + 1
+    per_slot = extra_idle // slots
+    rem = extra_idle % slots
+
+    idle_before_round = [per_slot + (1 if i < rem else 0) for i in range(spec.rounds)]
+    idle_tail = per_slot
+    return {
+        "base_duration_ticks": base_per_data,
+        "extra_idle_ticks": extra_idle,
+        "idle_before_round": idle_before_round,
+        "idle_tail": idle_tail,
+    }
+
+
+def build_data_qubit_timeline(spec: FixedDurationSpec, cost_model: ScheduleCostModel | None = None) -> dict[str, object]:
+    model = cost_model or ScheduleCostModel()
+    plan = plan_fixed_duration_schedule(spec=spec, cost_model=model)
+    data, _ancilla = _data_and_ancilla_qubits(spec.distance)
+
+    # Round-level participation sets for data qubits.
+    left_active = {data[i] for i in range(spec.distance - 1)}
+    right_active = {data[i + 1] for i in range(spec.distance - 1)}
+
+    segments: list[dict[str, object]] = []
+    for r in range(spec.rounds):
+        idle = int(plan["idle_before_round"][r])
+        if idle > 0:
+            segments.append(
+                {
+                    "segment": f"round{r}_idle_before",
+                    "duration": idle,
+                    "active_data": set(),
+                    "kind": "idle_before_round",
+                    "round": r,
+                }
+            )
+        segments.append(
+            {
+                "segment": f"round{r}_cx_left",
+                "duration": model.cx_ticks,
+                "active_data": set(left_active),
+                "kind": "cx_left",
+                "round": r,
+            }
+        )
+        segments.append(
+            {
+                "segment": f"round{r}_cx_right",
+                "duration": model.cx_ticks,
+                "active_data": set(right_active),
+                "kind": "cx_right",
+                "round": r,
+            }
+        )
+        segments.append(
+            {
+                "segment": f"round{r}_anc_measure",
+                "duration": model.ancilla_measure_ticks,
+                "active_data": set(),
+                "kind": "ancilla_measure",
+                "round": r,
+            }
+        )
+        segments.append(
+            {
+                "segment": f"round{r}_anc_reset",
+                "duration": model.ancilla_reset_ticks,
+                "active_data": set(),
+                "kind": "ancilla_reset",
+                "round": r,
+            }
+        )
+
+    idle_tail = int(plan["idle_tail"])
+    if idle_tail > 0:
+        segments.append(
+            {
+                "segment": "idle_tail",
+                "duration": idle_tail,
+                "active_data": set(),
+                "kind": "idle_tail",
+                "round": None,
+            }
+        )
+
+    timelines: dict[int, list[dict[str, int | str]]]= {q: [] for q in data}
+    for q in data:
+        t0 = 0
+        for seg in segments:
+            duration = int(seg["duration"])
+            if duration <= 0:
+                continue
+            is_active = q in seg["active_data"]
+            timelines[q].append(
+                {
+                    "segment": str(seg["segment"]),
+                    "kind": str(seg["kind"]),
+                    "start": t0,
+                    "end": t0 + duration,
+                    "duration": duration,
+                    "active": int(is_active),
+                    "idle": int(not is_active),
+                }
+            )
+            t0 += duration
+
+    return {
+        "plan": plan,
+        "segments": segments,
+        "timelines": timelines,
+    }
 
 
 def build_fixed_duration_memory_circuit(
@@ -121,68 +231,70 @@ def build_fixed_duration_memory_circuit(
     cost_model: ScheduleCostModel | None = None,
     injected_faults: Iterable[InjectedFault] | None = None,
 ) -> tuple[stim.Circuit, dict[str, int | float | str]]:
-    model = cost_model or ScheduleCostModel()
     noise = noise or NoiseModel()
-    plan = plan_fixed_duration_schedule(spec=spec, cost_model=model)
+    model = cost_model or ScheduleCostModel()
+    timeline = build_data_qubit_timeline(spec=spec, cost_model=model)
 
     data, ancilla = _data_and_ancilla_qubits(spec.distance)
     anc_count = len(ancilla)
     data_count = len(data)
 
-    left_layer = [(data[i], ancilla[i]) for i in range(anc_count)]
-    right_layer = [(data[i + 1], ancilla[i]) for i in range(anc_count)]
+    left_pairs = [(data[i], ancilla[i]) for i in range(anc_count)]
+    right_pairs = [(data[i + 1], ancilla[i]) for i in range(anc_count)]
 
     circuit = stim.Circuit()
     circuit.append("R", data + ancilla)
     if spec.logical_bit == 1:
         circuit.append("X", data)
 
-    for r in range(spec.rounds):
-        idle_ticks = int(plan["idle_before_round"][r])
-        _append_ticks(circuit, idle_ticks)
-        p_idle = _segment_probability(noise.p_idle_tick, idle_ticks)
-        if p_idle > 0:
-            circuit.append("X_ERROR", data, [p_idle])
+    for seg in timeline["segments"]:
+        kind = str(seg["kind"])
+        duration = int(seg["duration"])
+        round_index = seg["round"]
 
-        _apply_injected_faults(circuit, injected_faults, "before_round", data, round_index=r)
+        idle_data = [q for q in data if q not in seg["active_data"]]
+        p_idle = odd_flip_probability(noise.p_idle_tick, duration)
+        if p_idle > 0 and idle_data:
+            circuit.append("X_ERROR", idle_data, [p_idle])
 
-        if noise.p_data_round > 0:
-            circuit.append("X_ERROR", data, [noise.p_data_round])
+        if kind == "idle_before_round":
+            _append_ticks(circuit, duration)
+        elif kind == "cx_left":
+            _apply_injected_faults(circuit, injected_faults, "before_round", data, round_index=round_index)
+            if noise.p_data_round > 0:
+                circuit.append("X_ERROR", data, [noise.p_data_round])
+            _append_cx_layer(circuit, left_pairs, p_cx=noise.p_cx)
+            _append_ticks(circuit, duration)
+        elif kind == "cx_right":
+            _append_cx_layer(circuit, right_pairs, p_cx=noise.p_cx)
+            _append_ticks(circuit, duration)
+        elif kind == "ancilla_measure":
+            if noise.p_meas_ancilla > 0:
+                circuit.append("X_ERROR", ancilla, [noise.p_meas_ancilla])
+            circuit.append("M", ancilla)
+            _append_ticks(circuit, duration)
 
-        targets_l: list[int] = []
-        for c, t in left_layer:
-            targets_l.extend([c, t])
-        circuit.append("CX", targets_l)
-
-        targets_r: list[int] = []
-        for c, t in right_layer:
-            targets_r.extend([c, t])
-        circuit.append("CX", targets_r)
-
-        if noise.p_meas_ancilla > 0:
-            circuit.append("X_ERROR", ancilla, [noise.p_meas_ancilla])
-        circuit.append("MR", ancilla)
-        if noise.p_reset_ancilla > 0:
-            circuit.append("X_ERROR", ancilla, [noise.p_reset_ancilla])
-
-        if r == 0:
-            for j in range(anc_count):
-                circuit.append("DETECTOR", [stim.target_rec(-(anc_count - j))])
+            if int(round_index) == 0:
+                for j in range(anc_count):
+                    circuit.append("DETECTOR", [stim.target_rec(-(anc_count - j))])
+            else:
+                for j in range(anc_count):
+                    circuit.append(
+                        "DETECTOR",
+                        [
+                            stim.target_rec(-(anc_count - j)),
+                            stim.target_rec(-(2 * anc_count - j)),
+                        ],
+                    )
+        elif kind == "ancilla_reset":
+            circuit.append("R", ancilla)
+            if noise.p_reset_ancilla > 0:
+                circuit.append("X_ERROR", ancilla, [noise.p_reset_ancilla])
+            _append_ticks(circuit, duration)
+        elif kind == "idle_tail":
+            _append_ticks(circuit, duration)
         else:
-            for j in range(anc_count):
-                circuit.append(
-                    "DETECTOR",
-                    [
-                        stim.target_rec(-(anc_count - j)),
-                        stim.target_rec(-(2 * anc_count - j)),
-                    ],
-                )
-
-    idle_tail = int(plan["idle_tail"])
-    _append_ticks(circuit, idle_tail)
-    p_idle_tail = _segment_probability(noise.p_idle_tick, idle_tail)
-    if p_idle_tail > 0:
-        circuit.append("X_ERROR", data, [p_idle_tail])
+            raise RuntimeError(f"Unsupported timeline segment kind: {kind}")
 
     _apply_injected_faults(circuit, injected_faults, "before_final_measure", data, round_index=None)
 
@@ -204,12 +316,18 @@ def build_fixed_duration_memory_circuit(
                 ],
             )
 
-    # This benchmark tracks computational-basis memory of the rightmost data qubit.
     circuit.append("OBSERVABLE_INCLUDE", [stim.target_rec(-1)], 0)
 
-    structural_idle = spec.rounds * (model.ancilla_measure_ticks + model.ancilla_reset_ticks)
-    active_gate = spec.rounds * (2 * model.cx_ticks)
+    timelines = timeline["timelines"]
+    per_qubit_active = {str(q): int(sum(row["duration"] for row in timelines[q] if row["active"] == 1)) for q in data}
+    per_qubit_idle = {str(q): int(sum(row["duration"] for row in timelines[q] if row["idle"] == 1)) for q in data}
+    per_qubit_total = {str(q): per_qubit_active[str(q)] + per_qubit_idle[str(q)] for q in data}
+
+    # Structural idle counts idle that is not from user-inserted padding.
+    plan = timeline["plan"]
     inserted_idle = int(plan["extra_idle_ticks"])
+    structural_idle_total = spec.target_duration_ticks - inserted_idle
+
     audit = {
         "distance": spec.distance,
         "rounds": spec.rounds,
@@ -217,15 +335,15 @@ def build_fixed_duration_memory_circuit(
         "target_duration_ticks": spec.target_duration_ticks,
         "base_duration_ticks": int(plan["base_duration_ticks"]),
         "inserted_idle_ticks": inserted_idle,
-        "structural_idle_ticks": structural_idle,
-        "active_gate_ticks": active_gate,
-        "meas_reset_ticks": structural_idle,
-        "accounted_total_ticks": active_gate + structural_idle + inserted_idle,
-        "idle_tail_ticks": idle_tail,
+        "structural_duration_ticks": structural_idle_total,
+        "accounted_total_ticks": spec.target_duration_ticks,
+        "idle_tail_ticks": int(plan["idle_tail"]),
         "num_detectors": circuit.num_detectors,
         "num_observables": circuit.num_observables,
         "mwpm_applicable": int(circuit.num_detectors > 0),
-        "idle_before_round": ",".join(str(v) for v in plan["idle_before_round"]),
+        "per_qubit_active_ticks_json": json.dumps(per_qubit_active, sort_keys=True),
+        "per_qubit_idle_ticks_json": json.dumps(per_qubit_idle, sort_keys=True),
+        "per_qubit_total_ticks_json": json.dumps(per_qubit_total, sort_keys=True),
     }
     return circuit, audit
 
@@ -274,11 +392,10 @@ def evaluate_fixed_duration_decoders(
     method_rows: list[dict[str, int | float | str]] = []
     pairwise_rows: list[dict[str, int | str]] = []
 
-    preds: dict[str, np.ndarray] = {}
-    preds["final_data_majority"] = final_data_majority_predictions(measurements, final_cols)
-
     failure_masks: dict[str, np.ndarray] = {}
-    maj_fail = preds["final_data_majority"].reshape(-1) != logical_bit
+
+    maj_pred = final_data_majority_predictions(measurements, final_cols)
+    maj_fail = maj_pred.reshape(-1) != logical_bit
     failure_masks["final_data_majority"] = maj_fail
     method_rows.append(
         {
@@ -293,7 +410,6 @@ def evaluate_fixed_duration_decoders(
 
     if circuit.num_detectors > 0:
         oracle_pred = decode_syndrome_batch(circuit, syndrome, weight_mode="detector_model")
-        preds["mwpm_oracle_informed"] = oracle_pred
         oracle_fail = oracle_pred.reshape(-1) != actual_observables.reshape(-1)
         failure_masks["mwpm_oracle_informed"] = oracle_fail
         method_rows.append(
@@ -335,15 +451,17 @@ def evaluate_fixed_duration_decoders(
     return pd.DataFrame(method_rows), pd.DataFrame(pairwise_rows), pd.DataFrame(counts_rows)
 
 
-def run_syndrome_schedule_smoke(
+def _run_grid(
     output_dir: str | Path,
     *,
-    target_duration_ticks: int = 30,
-    shots: int = 200,
-    seed: int = 20261114,
-    distances: Iterable[int] = (3, 5),
-    rounds_set: Iterable[int] = (0, 1, 3, 5),
-    logical_inputs: Iterable[int] = (0, 1),
+    target_duration_ticks: int,
+    shots: int,
+    seed: int,
+    distances: Iterable[int],
+    rounds_set: Iterable[int],
+    logical_inputs: Iterable[int],
+    noise: NoiseModel,
+    export_dem: bool,
 ) -> Path:
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -356,12 +474,14 @@ def run_syndrome_schedule_smoke(
         "rounds_set": list(rounds_set),
         "logical_inputs": list(logical_inputs),
         "noise_model": {
-            "p_data_round": 0.0,
-            "p_idle_tick": 0.0,
-            "p_meas_ancilla": 0.0,
-            "p_reset_ancilla": 0.0,
-            "p_final_data_meas": 0.0,
+            "p_data_round": noise.p_data_round,
+            "p_idle_tick": noise.p_idle_tick,
+            "p_cx": noise.p_cx,
+            "p_meas_ancilla": noise.p_meas_ancilla,
+            "p_reset_ancilla": noise.p_reset_ancilla,
+            "p_final_data_meas": noise.p_final_data_meas,
         },
+        "export_dem": export_dem,
     }
     (out_dir / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
 
@@ -369,28 +489,51 @@ def run_syndrome_schedule_smoke(
     method_rows = []
     pairwise_rows = []
     counts_rows = []
+    seed_rows = []
+
+    circuit_dir = out_dir / "circuits"
+    dem_dir = out_dir / "dem"
+    circuit_dir.mkdir(parents=True, exist_ok=True)
+    if export_dem:
+        dem_dir.mkdir(parents=True, exist_ok=True)
 
     for d in distances:
         for r in rounds_set:
             for lb in logical_inputs:
+                per_case_seed = seed + d * 100 + r * 10 + lb
                 spec = FixedDurationSpec(
                     distance=d,
                     rounds=r,
                     logical_bit=lb,
                     target_duration_ticks=target_duration_ticks,
                 )
-                circuit, audit = build_fixed_duration_memory_circuit(spec=spec, noise=NoiseModel())
-                (out_dir / "circuits").mkdir(parents=True, exist_ok=True)
-                circuit_path = out_dir / "circuits" / f"d{d}_r{r}_l{lb}.stim"
+                circuit, audit = build_fixed_duration_memory_circuit(spec=spec, noise=noise)
+                circuit_path = circuit_dir / f"d{d}_r{r}_l{lb}.stim"
                 circuit_path.write_text(str(circuit), encoding="utf-8")
 
+                if export_dem:
+                    dem_path = dem_dir / f"d{d}_r{r}_l{lb}.dem"
+                    if circuit.num_detectors > 0:
+                        dem = circuit.detector_error_model(decompose_errors=True)
+                        dem_path.write_text(str(dem), encoding="utf-8")
+                    else:
+                        dem_path.write_text("# no detectors for R=0\n", encoding="utf-8")
+
                 timing_rows.append(audit)
+                seed_rows.append(
+                    {
+                        "distance": d,
+                        "rounds": r,
+                        "logical_bit": lb,
+                        "seed": per_case_seed,
+                    }
+                )
 
                 methods_df, pairwise_df, counts_df = evaluate_fixed_duration_decoders(
                     circuit=circuit,
                     logical_bit=lb,
                     shots=shots,
-                    seed=seed + d * 100 + r * 10 + lb,
+                    seed=per_case_seed,
                 )
                 methods_df.insert(0, "logical_bit", lb)
                 methods_df.insert(0, "rounds", r)
@@ -413,5 +556,61 @@ def run_syndrome_schedule_smoke(
     if pairwise_rows:
         pd.concat(pairwise_rows, ignore_index=True).to_csv(out_dir / "decoder_pairwise.csv", index=False)
     pd.concat(counts_rows, ignore_index=True).to_csv(out_dir / "counts.csv", index=False)
+    pd.DataFrame(seed_rows).to_csv(out_dir / "seeds.csv", index=False)
 
     return out_dir
+
+
+def run_syndrome_schedule_smoke(
+    output_dir: str | Path,
+    *,
+    target_duration_ticks: int = 30,
+    shots: int = 200,
+    seed: int = 20261114,
+    distances: Iterable[int] = (3, 5),
+    rounds_set: Iterable[int] = (0, 1, 3, 5),
+    logical_inputs: Iterable[int] = (0, 1),
+) -> Path:
+    return _run_grid(
+        output_dir=output_dir,
+        target_duration_ticks=target_duration_ticks,
+        shots=shots,
+        seed=seed,
+        distances=distances,
+        rounds_set=rounds_set,
+        logical_inputs=logical_inputs,
+        noise=NoiseModel(),
+        export_dem=False,
+    )
+
+
+def run_syndrome_schedule_model_check(
+    output_dir: str | Path,
+    *,
+    target_duration_ticks: int = 30,
+    shots: int = 200,
+    seed: int = 20261114,
+    distances: Iterable[int] = (3, 5),
+    rounds_set: Iterable[int] = (0, 1, 3, 5),
+    logical_inputs: Iterable[int] = (0, 1),
+    noise: NoiseModel | None = None,
+) -> Path:
+    model_noise = noise or NoiseModel(
+        p_data_round=0.002,
+        p_idle_tick=0.001,
+        p_cx=0.004,
+        p_meas_ancilla=0.003,
+        p_reset_ancilla=0.002,
+        p_final_data_meas=0.002,
+    )
+    return _run_grid(
+        output_dir=output_dir,
+        target_duration_ticks=target_duration_ticks,
+        shots=shots,
+        seed=seed,
+        distances=distances,
+        rounds_set=rounds_set,
+        logical_inputs=logical_inputs,
+        noise=model_noise,
+        export_dem=True,
+    )

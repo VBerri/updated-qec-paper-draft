@@ -1,0 +1,13 @@
+distance,rounds,logical_bit,left_method,right_method,left_only_failures,right_only_failures,both_failures,both_success
+3,1,0,final_data_majority,mwpm_oracle_informed,0,0,0,50
+3,1,1,final_data_majority,mwpm_oracle_informed,0,0,0,50
+3,3,0,final_data_majority,mwpm_oracle_informed,1,0,0,49
+3,3,1,final_data_majority,mwpm_oracle_informed,0,0,0,50
+3,5,0,final_data_majority,mwpm_oracle_informed,0,0,0,50
+3,5,1,final_data_majority,mwpm_oracle_informed,1,0,0,49
+5,1,0,final_data_majority,mwpm_oracle_informed,0,0,0,50
+5,1,1,final_data_majority,mwpm_oracle_informed,0,0,0,50
+5,3,0,final_data_majority,mwpm_oracle_informed,0,0,0,50
+5,3,1,final_data_majority,mwpm_oracle_informed,0,0,0,50
+5,5,0,final_data_majority,mwpm_oracle_informed,0,0,0,50
+5,5,1,final_data_majority,mwpm_oracle_informed,0,0,0,50
